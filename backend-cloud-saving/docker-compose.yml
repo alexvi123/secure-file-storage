@@ -1,0 +1,319 @@
+version: '3.8'
+
+services:
+  # Server API principal
+  api:
+    build: .
+    container_name: cloud-api
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/cloudstorage
+      - JWT_SECRET=your_jwt_secret_key_here
+      - NUM_STORAGE_CONTAINERS=20
+      - CONTAINER_PREFIX=storage-
+      - CONTAINER_PORT=3000
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Bază de date PostgreSQL
+  postgres:
+    image: postgres:14-alpine
+    container_name: cloud-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cloudstorage
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Frontend Angular
+  frontend:
+    build: ../frontend
+    container_name: cloud-frontend
+    ports:
+      - "4200:80"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Containere de stocare pentru fragmentele de fișiere
+  storage-1:
+    build: ./storage-container
+    container_name: storage-1
+    environment:
+      - CONTAINER_ID=1
+      - PORT=3000
+    volumes:
+      - storage-data-1:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-2:
+    build: ./storage-container
+    container_name: storage-2
+    environment:
+      - CONTAINER_ID=2
+      - PORT=3000
+    volumes:
+      - storage-data-2:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-3:
+    build: ./storage-container
+    container_name: storage-3
+    environment:
+      - CONTAINER_ID=3
+      - PORT=3000
+    volumes:
+      - storage-data-3:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-4:
+    build: ./storage-container
+    container_name: storage-4
+    environment:
+      - CONTAINER_ID=4
+      - PORT=3000
+    volumes:
+      - storage-data-4:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-5:
+    build: ./storage-container
+    container_name: storage-5
+    environment:
+      - CONTAINER_ID=5
+      - PORT=3000
+    volumes:
+      - storage-data-5:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-6:
+    build: ./storage-container
+    container_name: storage-6
+    environment:
+      - CONTAINER_ID=6
+      - PORT=3000
+    volumes:
+      - storage-data-6:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-7:
+    build: ./storage-container
+    container_name: storage-7
+    environment:
+      - CONTAINER_ID=7
+      - PORT=3000
+    volumes:
+      - storage-data-7:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-8:
+    build: ./storage-container
+    container_name: storage-8
+    environment:
+      - CONTAINER_ID=8
+      - PORT=3000
+    volumes:
+      - storage-data-8:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-9:
+    build: ./storage-container
+    container_name: storage-9
+    environment:
+      - CONTAINER_ID=9
+      - PORT=3000
+    volumes:
+      - storage-data-9:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-10:
+    build: ./storage-container
+    container_name: storage-10
+    environment:
+      - CONTAINER_ID=10
+      - PORT=3000
+    volumes:
+      - storage-data-10:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-11:
+    build: ./storage-container
+    container_name: storage-11
+    environment:
+      - CONTAINER_ID=11
+      - PORT=3000
+    volumes:
+      - storage-data-11:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-12:
+    build: ./storage-container
+    container_name: storage-12
+    environment:
+      - CONTAINER_ID=12
+      - PORT=3000
+    volumes:
+      - storage-data-12:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-13:
+    build: ./storage-container
+    container_name: storage-13
+    environment:
+      - CONTAINER_ID=13
+      - PORT=3000
+    volumes:
+      - storage-data-13:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-14:
+    build: ./storage-container
+    container_name: storage-14
+    environment:
+      - CONTAINER_ID=14
+      - PORT=3000
+    volumes:
+      - storage-data-14:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-15:
+    build: ./storage-container
+    container_name: storage-15
+    environment:
+      - CONTAINER_ID=15
+      - PORT=3000
+    volumes:
+      - storage-data-15:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-16:
+    build: ./storage-container
+    container_name: storage-16
+    environment:
+      - CONTAINER_ID=16
+      - PORT=3000
+    volumes:
+      - storage-data-16:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-17:
+    build: ./storage-container
+    container_name: storage-17
+    environment:
+      - CONTAINER_ID=17
+      - PORT=3000
+    volumes:
+      - storage-data-17:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-18:
+    build: ./storage-container
+    container_name: storage-18
+    environment:
+      - CONTAINER_ID=18
+      - PORT=3000
+    volumes:
+      - storage-data-18:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-19:
+    build: ./storage-container
+    container_name: storage-19
+    environment:
+      - CONTAINER_ID=19
+      - PORT=3000
+    volumes:
+      - storage-data-19:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  storage-20:
+    build: ./storage-container
+    container_name: storage-20
+    environment:
+      - CONTAINER_ID=20
+      - PORT=3000
+    volumes:
+      - storage-data-20:/app/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  storage-data-1:
+  storage-data-2:
+  storage-data-3:
+  storage-data-4:
+  storage-data-5:
+  storage-data-6:
+  storage-data-7:
+  storage-data-8:
+  storage-data-9:
+  storage-data-10:
+  storage-data-11:
+  storage-data-12:
+  storage-data-13:
+  storage-data-14:
+  storage-data-15:
+  storage-data-16:
+  storage-data-17:
+  storage-data-18:
+  storage-data-19:
+  storage-data-20:
