@@ -1,1 +1,64 @@
-<p>login works!</p>
+<!-- src/app/pages/auth/login/login.component.html -->
+<div class="login-container">
+    <div class="login-card">
+      <h2>Autentificare</h2>
+      
+      <!-- Mesaj de succes -->
+      <div *ngIf="successMessage" class="alert alert-success">
+        {{ successMessage }}
+      </div>
+      
+      <!-- Mesaj de eroare -->
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+      
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email" 
+            class="form-control" 
+            [ngClass]="{ 'is-invalid': submitted && f['email'].errors }"
+            autocomplete="username"
+          />
+          <div *ngIf="submitted && f['email'].errors" class="invalid-feedback">
+            <div *ngIf="f['email'].errors['required']">Email este obligatoriu</div>
+            <div *ngIf="f['email'].errors['email']">Introduceți un email valid</div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Parolă</label>
+          <input 
+            type="password" 
+            id="password" 
+            formControlName="password" 
+            class="form-control" 
+            [ngClass]="{ 'is-invalid': submitted && f['password'].errors }"
+            autocomplete="current-password"
+          />
+          <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+            <div *ngIf="f['password'].errors['required']">Parola este obligatorie</div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <button [disabled]="loading" class="btn btn-primary btn-block">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm mr-1"></span>
+            Autentificare
+          </button>
+        </div>
+        
+        <div class="text-center mt-3">
+          <a routerLink="/auth/forgot-password">Ai uitat parola?</a>
+        </div>
+        
+        <div class="text-center mt-2">
+          Nu ai cont? <a routerLink="/auth/register">Înregistrează-te</a>
+        </div>
+      </form>
+    </div>
+  </div>

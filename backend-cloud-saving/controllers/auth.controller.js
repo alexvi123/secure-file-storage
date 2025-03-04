@@ -32,7 +32,7 @@ const register = async (req, res, next) => {
     );
     const newUser = result.rows[0];
 
-    req.status(201).json({
+    res.status(201).json({
       message: " Utilizator inregistrat cu succes!",
       user: newUser,
     });

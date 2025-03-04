@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const filesController = require("../controllers/files.controller");
+const StorageService = require("../services/storage.service");
 const {
   upload,
   handleMulterError,
@@ -94,21 +95,21 @@ router.delete(
  * @description Verifică integritatea unui fișier
  * @access Private
  */
-router.get(
-  "/:id/integrity",
-  ownershipMiddleware("id", "file"),
-  filesController.verifyFileIntegrity
-);
+// router.get(
+//   "/:id/integrity",
+//   ownershipMiddleware("id", "file"),
+//   StorageService.verifyFileIntegrity
+// );
 
 /**
  * @route POST /api/files/:id/repair
  * @description Încearcă să repare un fișier
  * @access Private
  */
-router.post(
-  "/:id/repair",
-  ownershipMiddleware("id", "file"),
-  filesController.repairFile
-);
+// router.post(
+//   "/:id/repair",
+//   ownershipMiddleware("id", "file"),
+//   filesController.repairFile
+// );
 
 module.exports = router;
