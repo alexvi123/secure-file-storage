@@ -4,7 +4,8 @@ import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
-const API_URL = 'http://localhost:5000/api';
+import { response } from 'express';
+const API_URL = '/api';
 
 export interface User {
     id: number;
@@ -56,15 +57,21 @@ export class AuthService {
                 catchError(this.handleError)
             );
     }
-
     verify2FA(code: string, tempToken: string): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/verify-2fa`, { code, tempToken })
-            .pipe(
-                tap(response => {
-                    this.setSession(response);
-                }),
-                catchError(this.handleError)
-            );
+        return this.http.post<AuthResponse>(
+            `${this.apiUrl}/verify-2fa`,
+            { code, tempToken },
+            {
+                headers: {
+                    'Authorization': `Bearer ${tempToken}`  // Trimite token-ul în header
+                }
+            }
+        ).pipe(
+            tap(response => {
+                this.setSession(response);
+            }),
+            catchError(this.handleError)
+        );
     }
 
     logout(): void {
@@ -191,14 +198,35 @@ export class AuthService {
 
     private handleError(error: any): Observable<never> {
         let errorMessage = 'A apărut o eroare';
+
+        console.error('===== DETALII COMPLETE EROARE =====');
+        console.log('Obiect eroare complet:', error);
+
         if (error.error instanceof ErrorEvent) {
             // Eroare client-side
             errorMessage = `frontend Eroare: ${error.error.message}`;
+            console.error('Eroare client-side:', error.error);
         } else {
             // Eroare backend
+            console.error('Status cod:', error.status);
+            console.error('Status text:', error.statusText);
+            console.error('URL:', error.url);
+            console.error('Headers:', error.headers);
+
+            if (error.error) {
+                console.error('Corpul răspunsului (error.error):', error.error);
+                if (typeof error.error === 'object') {
+                    console.error('Mesaj în error.error:', error.error.message);
+                    console.error('Alte proprietăți din error.error:', Object.keys(error.error));
+                }
+            }
+
             errorMessage = error.error?.message || `backend Cod: ${error.status}, Mesaj: ${error.message}`;
         }
-        console.error(errorMessage);
+
+        console.error('Mesaj de eroare final:', errorMessage);
+        console.error('===== SFÂRȘIT DETALII EROARE =====');
+
         return throwError(() => new Error(errorMessage));
     }
 }

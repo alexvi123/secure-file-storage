@@ -1,11 +1,11 @@
 // src/app/services/file.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpEvent, HttpParams, HttpRequest } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 
 // Folosim URL-ul API direct (sau puteți importa din config.ts)
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 export interface FileMetadata {
     id: number;
@@ -100,15 +100,30 @@ export class FileService {
      * Încarcă un fișier
      */
     uploadFile(file: File): Observable<HttpEvent<FileUploadResponse>> {
+        console.error('DEBUG: FileService uploadFile called');
+        console.error('DEBUG: File to upload:', {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
         const formData = new FormData();
         formData.append('file', file);
 
         const request = new HttpRequest('POST', `${this.apiUrl}/upload`, formData, {
-            reportProgress: true
+            reportProgress: true,
+            responseType: 'json'
         });
 
         return this.http.request<FileUploadResponse>(request)
-            .pipe(catchError(this.handleError));
+            .pipe(catchError(error => {
+                console.error('Error during file upload:', error);
+                if (error instanceof HttpErrorResponse) {
+                    const serverMessage = error.error?.message || error.message || 'A apărut o eroare la încărcarea fișierului';
+                    return throwError(() => new Error(serverMessage));
+                }
+                return throwError(() => error);
+            })
+            );
     }
 
     /**
@@ -175,11 +190,13 @@ export class FileService {
         if (error.error instanceof ErrorEvent) {
             // Eroare client-side
             errorMessage = `Eroare: ${error.error.message}`;
-        } else {
+        } else if (error instanceof HttpErrorResponse) {
             // Eroare backend
-            errorMessage = error.error?.message || `Cod: ${error.status}, Mesaj: ${error.message}`;
+            errorMessage = error.error?.message || `Cod: ${error.status}, Mesaj: ${error.statusText || error.message}`;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
         }
-        console.error(errorMessage);
+        console.error('FileService error:', errorMessage, error);
         return throwError(() => new Error(errorMessage));
     }
 }

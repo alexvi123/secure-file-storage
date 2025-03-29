@@ -6,7 +6,7 @@ import { catchError } from 'rxjs/operators';
 import { User } from './auth.service';
 
 // URL-ul API
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 export interface PaginatedUsersResponse {
     users: User[];

@@ -20,9 +20,9 @@ services:
     depends_on:
       - postgres
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
-
+  
   # Bază de date PostgreSQL
   postgres:
     image: postgres:14-alpine
@@ -37,17 +37,17 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   # Frontend Angular
   frontend:
-    build: ../frontend
+    build: ../frontend-cloud-saving
     container_name: cloud-frontend
     ports:
       - "4200:80"
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   # Containere de stocare pentru fragmentele de fișiere
@@ -60,7 +60,7 @@ services:
     volumes:
       - storage-data-1:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-2:
@@ -72,7 +72,7 @@ services:
     volumes:
       - storage-data-2:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-3:
@@ -84,7 +84,7 @@ services:
     volumes:
       - storage-data-3:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-4:
@@ -96,7 +96,7 @@ services:
     volumes:
       - storage-data-4:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-5:
@@ -108,7 +108,7 @@ services:
     volumes:
       - storage-data-5:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-6:
@@ -120,7 +120,7 @@ services:
     volumes:
       - storage-data-6:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-7:
@@ -132,7 +132,7 @@ services:
     volumes:
       - storage-data-7:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-8:
@@ -144,7 +144,7 @@ services:
     volumes:
       - storage-data-8:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-9:
@@ -156,7 +156,7 @@ services:
     volumes:
       - storage-data-9:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-10:
@@ -168,7 +168,7 @@ services:
     volumes:
       - storage-data-10:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-11:
@@ -180,7 +180,7 @@ services:
     volumes:
       - storage-data-11:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-12:
@@ -192,7 +192,7 @@ services:
     volumes:
       - storage-data-12:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-13:
@@ -204,7 +204,7 @@ services:
     volumes:
       - storage-data-13:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-14:
@@ -216,7 +216,7 @@ services:
     volumes:
       - storage-data-14:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-15:
@@ -228,7 +228,7 @@ services:
     volumes:
       - storage-data-15:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-16:
@@ -240,7 +240,7 @@ services:
     volumes:
       - storage-data-16:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-17:
@@ -252,7 +252,7 @@ services:
     volumes:
       - storage-data-17:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-18:
@@ -264,7 +264,7 @@ services:
     volumes:
       - storage-data-18:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-19:
@@ -276,7 +276,7 @@ services:
     volumes:
       - storage-data-19:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
   storage-20:
@@ -288,11 +288,11 @@ services:
     volumes:
       - storage-data-20:/app/storage
     networks:
-      - app-network
+      - cloud-network
     restart: unless-stopped
 
 networks:
-  app-network:
+  cloud-network:
     driver: bridge
 
 volumes:

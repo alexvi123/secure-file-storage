@@ -136,18 +136,20 @@ const twoFactorMiddleware = async (req, res, next) => {
  */
 const tempTokenMiddleware = async (req, res, next) => {
   try {
-    // Verifică dacă există header-ul de autorizare
+    // Verifică mai întâi în header
     const authHeader = req.headers.authorization;
+    let token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    } else if (req.body && req.body.tempToken) {
+      // Verifică în corpul cererii
+      token = req.body.tempToken;
+    } else {
       throw ApiError.unauthorized(
         "Acces neautorizat. Token-ul temporar este necesar."
       );
     }
-
-    // Extrage token-ul din header
-    const token = authHeader.split(" ")[1];
-
     try {
       // Verifică token-ul cu JWT
       const decoded = jwt.verify(token, process.env.JWT_SECRET);

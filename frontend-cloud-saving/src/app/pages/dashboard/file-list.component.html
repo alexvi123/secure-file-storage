@@ -1,0 +1,128 @@
+<!-- src/app/pages/dashboard/file-list.component.html -->
+<div class="file-list-container">
+  <header class="files-header">
+    <div class="header-content">
+      <h1>Fișierele mele</h1>
+      <div class="action-buttons">
+        <a 
+          routerLink="/dashboard/upload" 
+          class="btn btn-primary"
+        >
+          <i class="fa fa-upload"></i> Încarcă fișiere
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Se încarcă fișierele...</p>
+  </div>
+
+  <div *ngIf="error" class="error-container">
+    <i class="fa fa-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+  </div>
+
+  <div *ngIf="!loading && !error" class="files-list-wrapper">
+    <div class="bulk-actions" *ngIf="selectedFiles.size > 0">
+      <span>{{ selectedFiles.size }} fișiere selectate</span>
+      <div class="bulk-action-buttons">
+        <button 
+          class="btn btn-danger" 
+          (click)="performBulkAction('delete')"
+        >
+          <i class="fa fa-trash"></i> Șterge
+        </button>
+      </div>
+    </div>
+
+    <table class="files-table" *ngIf="files.length > 0">
+      <thead>
+        <tr>
+          <th class="select-column">
+            <input 
+              type="checkbox"
+              [checked]="selectedFiles.size === files.length"
+              (change)="toggleSelectAll($event)"
+            >
+          </th>
+          <th>Fișier</th>
+          <th>Tip</th>
+          <th>Dimensiune</th>
+          <th>Data încărcării</th>
+          <th>Acțiuni</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let file of files">
+          <td class="select-column">
+            <input 
+              type="checkbox" 
+              [checked]="isFileSelected(file.id)"
+              (change)="toggleFileSelection(file.id)"
+            >
+          </td>
+          <td class="file-name-column">
+            <div class="file-details">
+              <i class="fa {{ getFileIcon(file.mime_type) }}"></i>
+              <span>{{ file.original_name }}</span>
+            </div>
+          </td>
+          <td>{{ file.mime_type }}</td>
+          <td>{{ formatFileSize(file.size_bytes) }}</td>
+          <td>{{ file.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td class="actions-column">
+            <div class="file-actions">
+              <button 
+                class="btn btn-info" 
+                (click)="downloadFile(file)"
+                title="Descarcă"
+              >
+                <i class="fa fa-download"></i>
+              </button>
+              <button 
+                class="btn btn-danger" 
+                (click)="deleteFile(file.id)"
+                title="Șterge"
+              >
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="files.length === 0" class="no-files-container">
+      <i class="fa fa-folder-open-o"></i>
+      <p>Nu aveți niciun fișier încărcat</p>
+      <a 
+        routerLink="/dashboard/upload" 
+        class="btn btn-primary"
+      >
+        Încarcă primul tău fișier
+      </a>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button 
+        class="btn btn-secondary" 
+        (click)="changePage(currentPage - 1)"
+        [disabled]="currentPage === 1"
+      >
+        <i class="fa fa-chevron-left"></i> Anterioare
+      </button>
+      <span class="page-info">
+        Pagina {{ currentPage }} din {{ totalPages }}
+      </span>
+      <button 
+        class="btn btn-secondary" 
+        (click)="changePage(currentPage + 1)"
+        [disabled]="currentPage === totalPages"
+      >
+        Următoarele <i class="fa fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

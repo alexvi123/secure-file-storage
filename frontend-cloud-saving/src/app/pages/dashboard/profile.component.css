@@ -1,0 +1,149 @@
+.profile-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.content-header {
+  margin-bottom: 1.5rem;
+}
+
+.content-header h1 {
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.profile-section {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+  flex: 1 0 45%;
+}
+
+.two-factor-status {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 0.375rem;
+}
+
+.two-factor-status i {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+}
+
+.two-factor-status.inactive {
+  background-color: #f8f9fa;
+  border-left: 4px solid #6c757d;
+}
+
+.two-factor-status.active {
+  background-color: #d4edda;
+  border-left: 4px solid #28a745;
+}
+
+.qr-code-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+  text-align: center;
+}
+
+.qr-code-container img {
+  max-width: 200px;
+}
+
+.secret-key {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+}
+
+.secret-key code {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  background-color: #e9ecef;
+  border-radius: 0.25rem;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.setup-steps {
+  padding-left: 1.5rem;
+}
+
+.setup-steps li {
+  margin-bottom: 1.5rem;
+}
+
+.verification-code {
+  text-align: center;
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.disable-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.25rem;
+}
+
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}

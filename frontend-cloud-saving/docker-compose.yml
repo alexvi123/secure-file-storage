@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "4210:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - cloud-network
+
+networks:
+  cloud-network:
+    external: true

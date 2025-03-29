@@ -1,0 +1,227 @@
+<div class="profile-container">
+  <div class="content-header">
+    <h1>Profilul meu</h1>
+    <p>Gestionează-ți informațiile personale și setările de securitate</p>
+  </div>
+
+  <!-- Secțiunea Informații profil -->
+  <div class="profile-section">
+    <div class="section-header">
+      <h2>Informații personale</h2>
+      <p>Actualizează-ți datele profilului</p>
+    </div>
+
+    <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Prenume</label>
+          <input type="text" id="name" formControlName="name" class="form-control">
+          <div *ngIf="profileForm.get('name')?.invalid && profileForm.get('name')?.touched" class="invalid-feedback">
+            Prenumele este obligatoriu
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="surname">Nume</label>
+          <input type="text" id="surname" formControlName="surname" class="form-control">
+          <div *ngIf="profileForm.get('surname')?.invalid && profileForm.get('surname')?.touched" class="invalid-feedback">
+            Numele este obligatoriu
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" formControlName="email" class="form-control" >
+        <small>Adresa de email nu poate fi modificată</small>
+      </div>
+
+      <div class="form-group">
+        <label for="phone_number">Telefon</label>
+        <input type="text" id="phone_number" formControlName="phone_number" class="form-control">
+      </div>
+
+      <div *ngIf="message.profile.success" class="alert alert-success">
+        {{ message.profile.success }}
+      </div>
+
+      <div *ngIf="message.profile.error" class="alert alert-danger">
+        {{ message.profile.error }}
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid || loading.profile">
+        <span *ngIf="loading.profile" class="spinner-border spinner-border-sm mr-2"></span>
+        Salvează modificările
+      </button>
+    </form>
+  </div>
+
+  <!-- Secțiunea Schimbare parolă -->
+  <div class="profile-section">
+    <div class="section-header">
+      <h2>Schimbă parola</h2>
+      <p>Actualizează-ți parola periodică pentru securitate sporită</p>
+    </div>
+
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+      <div class="form-group">
+        <label for="currentPassword">Parola actuală</label>
+        <input type="password" id="currentPassword" formControlName="currentPassword" class="form-control">
+        <div *ngIf="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched" class="invalid-feedback">
+          Parola actuală este obligatorie
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">Parola nouă</label>
+        <input type="password" id="newPassword" formControlName="newPassword" class="form-control">
+        <div *ngIf="passwordForm.get('newPassword')?.errors?.['required'] && passwordForm.get('newPassword')?.touched" class="invalid-feedback">
+          Parola nouă este obligatorie
+        </div>
+        <div *ngIf="passwordForm.get('newPassword')?.errors?.['minlength'] && passwordForm.get('newPassword')?.touched" class="invalid-feedback">
+          Parola trebuie să aibă minim 8 caractere
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmă parola</label>
+        <input type="password" id="confirmPassword" formControlName="confirmPassword" class="form-control">
+        <div *ngIf="passwordForm.get('confirmPassword')?.errors?.['required'] && passwordForm.get('confirmPassword')?.touched" class="invalid-feedback">
+          Confirmarea parolei este obligatorie
+        </div>
+        <div *ngIf="passwordForm.get('confirmPassword')?.errors?.['mustMatch']" class="invalid-feedback">
+          Parolele nu coincid
+        </div>
+      </div>
+
+      <div *ngIf="message.password.success" class="alert alert-success">
+        {{ message.password.success }}
+      </div>
+
+      <div *ngIf="message.password.error" class="alert alert-danger">
+        {{ message.password.error }}
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid || loading.password">
+        <span *ngIf="loading.password" class="spinner-border spinner-border-sm mr-2"></span>
+        Schimbă parola
+      </button>
+    </form>
+  </div>
+
+  <!-- Secțiunea Autentificare în doi pași -->
+  <div class="profile-section">
+    <div class="section-header">
+      <h2>Autentificare în doi pași</h2>
+      <p>Activează verificarea în doi pași pentru securitate adițională</p>
+    </div>
+
+    <!-- Stare: Inactivă -->
+    <div *ngIf="twoFactorState === 'inactive'">
+      <div class="two-factor-status inactive">
+        <i class="fa fa-unlock-alt"></i>
+        <div>
+          <h4>Dezactivat</h4>
+          <p>Contul tău este protejat doar de parolă</p>
+        </div>
+      </div>
+
+      <p>
+        <i class="fa fa-info-circle"></i>
+        Autentificarea în doi pași adaugă un nivel suplimentar de securitate.
+      </p>
+
+      <button (click)="setupTwoFactor()" class="btn btn-primary" [disabled]="loading.enable2FA">
+        <span *ngIf="loading.enable2FA" class="spinner-border spinner-border-sm mr-2"></span>
+        Activează autentificarea în doi pași
+      </button>
+    </div>
+
+    <!-- Stare: Configurare -->
+    <div *ngIf="twoFactorState === 'setup'">
+      <h3>Configurare autentificare în doi pași</h3>
+      <p>Urmează acești pași pentru a activa autentificarea în doi pași:</p>
+
+      <ol class="setup-steps">
+        <li>
+          <p>Descarcă o aplicație de autentificare (Google Authenticator, Microsoft Authenticator sau Authy)</p>
+        </li>
+        <li>
+          <p>Scanează codul QR sau introdu codul manual</p>
+          <div class="qr-code-container">
+            <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="Cod QR pentru configurare 2FA">
+          </div>
+          <div *ngIf="twoFactorSecret" class="secret-key">
+            <p><strong>Cheie secretă:</strong></p>
+            <code>{{ twoFactorSecret }}</code>
+          </div>
+        </li>
+        <li>
+          <p>Introdu codul de verificare din aplicație</p>
+          <form [formGroup]="twoFactorForm" (ngSubmit)="activateTwoFactor()">
+            <div class="form-group">
+              <input type="text" formControlName="code" class="form-control verification-code"
+                     placeholder="123456" maxlength="6">
+              <div *ngIf="twoFactorForm.get('code')?.invalid && twoFactorForm.get('code')?.touched" class="invalid-feedback">
+                Introdu un cod valid de 6 cifre
+              </div>
+            </div>
+
+            <div *ngIf="message.twoFactor.error" class="alert alert-danger">
+              {{ message.twoFactor.error }}
+            </div>
+
+            <div class="action-buttons">
+              <button type="button" class="btn btn-secondary" (click)="cancelTwoFactorSetup()">
+                Anulează
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="twoFactorForm.invalid || loading.verify2FA">
+                <span *ngIf="loading.verify2FA" class="spinner-border spinner-border-sm mr-2"></span>
+                Verifică și activează
+              </button>
+            </div>
+          </form>
+        </li>
+      </ol>
+    </div>
+
+    <!-- Stare: Activă -->
+    <div *ngIf="twoFactorState === 'active'">
+      <div class="two-factor-status active">
+        <i class="fa fa-lock"></i>
+        <div>
+          <h4>Activată</h4>
+          <p>Contul tău este protejat de autentificarea în doi pași</p>
+        </div>
+      </div>
+
+      <div *ngIf="message.twoFactor.success" class="alert alert-success">
+        {{ message.twoFactor.success }}
+      </div>
+
+      <div class="disable-section">
+        <h4>Dezactivare autentificare în doi pași</h4>
+        <p>Introdu un cod de verificare pentru a dezactiva:</p>
+
+        <form [formGroup]="twoFactorForm" (ngSubmit)="disableTwoFactor()">
+          <div class="form-group">
+            <input type="text" formControlName="code" class="form-control verification-code"
+                   placeholder="123456" maxlength="6">
+            <div *ngIf="twoFactorForm.get('code')?.invalid && twoFactorForm.get('code')?.touched" class="invalid-feedback">
+              Introdu un cod valid de 6 cifre
+            </div>
+          </div>
+
+          <div *ngIf="message.twoFactor.error" class="alert alert-danger">
+            {{ message.twoFactor.error }}
+          </div>
+
+          <button type="submit" class="btn btn-danger" [disabled]="twoFactorForm.invalid || loading.disable2FA">
+            <span *ngIf="loading.disable2FA" class="spinner-border spinner-border-sm mr-2"></span>
+            Dezactivează autentificarea în doi pași
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

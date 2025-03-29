@@ -1,120 +1,38 @@
 <!-- src/app/pages/dashboard/dashboard.component.html -->
 <div class="dashboard-container">
-    <header class="dashboard-header">
-      <div class="logo">Cloud Storage</div>
-      
-      <div class="user-menu">
-        <span *ngIf="currentUser" class="welcome-message">
-          Bine ai venit, {{ currentUser.name }} {{ currentUser.surname }}
-        </span>
-        <button class="btn btn-outline" (click)="logout()">
-          Deconectare
-        </button>
-      </div>
-    </header>
+  <header class="dashboard-header">
+    <div class="logo">Cloud Storage</div>
     
-    <div class="dashboard-content">
-      <div class="sidebar">
-        <nav class="sidebar-menu">
-          <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="menu-item">
-            <i class="fa fa-dashboard"></i> Dashboard
-          </a>
-          <a routerLink="/dashboard/files" routerLinkActive="active" class="menu-item">
-            <i class="fa fa-file"></i> Fișierele mele
-          </a>
-          <a routerLink="/dashboard/upload" routerLinkActive="active" class="menu-item">
-            <i class="fa fa-upload"></i> Încarcă fișiere
-          </a>
-          <a routerLink="/dashboard/profile" routerLinkActive="active" class="menu-item">
-            <i class="fa fa-user"></i> Profil
-          </a>
-        </nav>
-      </div>
-      
-      <main class="main-content">
-        <div class="content-header">
-          <h1>Tablou de bord</h1>
-        </div>
-        
-        <div *ngIf="loading" class="loading-indicator">
-          <span class="spinner"></span> Încărcare date...
-        </div>
-        
-        <div *ngIf="error" class="error-message">
-          {{ error }}
-        </div>
-        
-        <div *ngIf="!loading && !error" class="dashboard-stats">
-          <div class="stats-card">
-            <div class="stats-icon">
-              <i class="fa fa-file"></i>
-            </div>
-            <div class="stats-info">
-              <h3>{{ stats?.totalFiles || 0 }}</h3>
-              <p>Fișiere</p>
-            </div>
-          </div>
-          
-          <div class="stats-card">
-            <div class="stats-icon">
-              <i class="fa fa-hdd-o"></i>
-            </div>
-            <div class="stats-info">
-              <h3>{{ stats?.totalSizeFormatted || '0 B' }}</h3>
-              <p>Spațiu utilizat</p>
-            </div>
-          </div>
-          
-          <div class="stats-card">
-            <div class="stats-icon">
-              <i class="fa fa-calendar"></i>
-            </div>
-            <div class="stats-info">
-              <h3>{{ stats?.lastUpload ? (stats?.lastUpload | date:'dd/MM/yyyy') : 'Niciodată' }}</h3>
-              <p>Ultima încărcare</p>
-            </div>
-          </div>
-        </div>
-        
-        <div *ngIf="!loading && !error && stats?.fileTypes?.length" class="file-types-section">
-          <h2>Tipuri de fișiere</h2>
-          <div class="file-types-grid">
-            <div *ngFor="let fileType of stats?.fileTypes" class="file-type-card">
-              <div class="file-type-icon">
-                <i class="fa" [ngClass]="{
-                  'fa-image': fileType.type === 'Imagini',
-                  'fa-file-video-o': fileType.type === 'Video',
-                  'fa-file-audio-o': fileType.type === 'Audio',
-                  'fa-file-pdf-o': fileType.type === 'PDF',
-                  'fa-file-word-o': fileType.type === 'Documente Word',
-                  'fa-file-excel-o': fileType.type === 'Foi de calcul',
-                  'fa-file-text-o': fileType.type === 'Text',
-                  'fa-file-o': fileType.type === 'Altele'
-                }"></i>
-              </div>
-              <div class="file-type-info">
-                <h4>{{ fileType.type }}</h4>
-                <p>{{ fileType.count }} fișiere ({{ fileType.sizeFormatted }})</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div *ngIf="!loading && !error && stats?.monthlyActivity?.length" class="activity-section">
-          <h2>Activitate lunară</h2>
-          <div class="activity-chart">
-            <div *ngFor="let month of stats?.monthlyActivity" class="activity-bar">
-              <div class="bar-value" [style.height.%]="getBarHeight(month.count)"></div>
-              <div class="bar-label">{{ month.month | monthLabel }}</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="upload-cta">
-          <a routerLink="/dashboard/upload" class="btn btn-primary">
-            <i class="fa fa-upload"></i> Încarcă fișiere noi
-          </a>
-        </div>
-      </main>
+    <div class="user-menu">
+      <span *ngIf="currentUser" class="welcome-message">
+        Bine ai venit, {{ currentUser.name }} {{ currentUser.surname }}
+      </span>
+      <button class="btn btn-outline" (click)="logout()">
+        Deconectare
+      </button>
     </div>
+  </header>
+  
+  <div class="dashboard-content">
+    <div class="sidebar">
+      <nav class="sidebar-menu">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="menu-item">
+          <i class="fa fa-dashboard"></i> Dashboard
+        </a>
+        <a routerLink="/dashboard/files" routerLinkActive="active" class="menu-item">
+          <i class="fa fa-file"></i> Fișierele mele
+        </a>
+        <a routerLink="/dashboard/upload" routerLinkActive="active" class="menu-item">
+          <i class="fa fa-upload"></i> Încarcă fișiere
+        </a>
+        <a routerLink="/dashboard/profile" routerLinkActive="active" class="menu-item">
+          <i class="fa fa-user"></i> Profil
+        </a>
+      </nav>
+    </div>
+    
+    <main class="main-content">
+      <router-outlet></router-outlet>
+    </main>
   </div>
+</div>

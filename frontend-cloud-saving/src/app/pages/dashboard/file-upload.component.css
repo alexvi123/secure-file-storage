@@ -1,0 +1,202 @@
+/* src/app/pages/dashboard/file-upload.component.scss */
+.upload-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.upload-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    color: #3f51b5;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #6c757d;
+  }
+}
+
+.file-input {
+  display: none;
+}
+
+.drag-drop-zone {
+  border: 2px dashed #3f51b5;
+  border-radius: 12px;
+  padding: 3rem;
+  text-align: center;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  .drag-drop-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #6c757d;
+
+    i {
+      font-size: 4rem;
+      color: #3f51b5;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.1rem;
+    }
+
+    small {
+      color: #868e96;
+    }
+  }
+
+  &:hover, &.dragover {
+    background-color: #e8eaf6;
+    border-color: #303f9f;
+  }
+}
+
+.selected-files-section {
+  margin-top: 1.5rem;
+
+  h3 {
+    margin-bottom: 1rem;
+    color: #333;
+  }
+}
+
+.file-list {
+  list-style: none;
+  padding: 0;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: background-color 0.2s;
+
+  .file-info {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+
+    i {
+      margin-right: 1rem;
+      color: #3f51b5;
+      font-size: 1.5rem;
+    }
+
+    span {
+      margin-right: 1rem;
+      color: #333;
+    }
+
+    .file-size {
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+  }
+
+  .remove-file-btn {
+    background-color: transparent;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #d32f2f;
+    }
+  }
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  margin: 1rem 0;
+
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+.upload-progress-section {
+  margin: 1.5rem 0;
+}
+
+.progress-container {
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  height: 25px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background-color: #4caf50;
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.upload-btn {
+  background-color: #3f51b5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  i {
+    margin-right: 0.5rem;
+  }
+
+  &:disabled {
+    background-color: #c5cae9;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #303f9f;
+  }
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

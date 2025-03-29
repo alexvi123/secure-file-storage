@@ -58,7 +58,7 @@ const login = async (req, res, next) => {
     }
 
     const user = result.rows[0];
-
+    console.log(user);
     // Verifică parola
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
@@ -104,27 +104,16 @@ const login = async (req, res, next) => {
  */
 const verify2FA = async (req, res, next) => {
   try {
-    const { code, tempToken } = req.body;
+    const { code } = req.body;
+    const userId = req.tempUser.id; // Ia userId-ul din req.tempUser
 
-    if (!code || !tempToken) {
-      throw ApiError.badRequest("Codul și token-ul temporar sunt obligatorii.");
-    }
-
-    // Decodifică token-ul temporar
-    let decoded;
-    try {
-      decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
-    } catch (error) {
-      throw ApiError.unauthorized("Token temporar invalid sau expirat.");
-    }
-
-    if (!decoded.userId || !decoded.require2FA) {
-      throw ApiError.unauthorized("Token temporar invalid.");
+    if (!code) {
+      throw ApiError.badRequest("Codul este obligatoriu.");
     }
 
     const db = req.app.locals.db;
     const result = await db.query("SELECT * FROM users WHERE id = $1", [
-      decoded.userId,
+      userId,
     ]);
 
     if (result.rows.length === 0) {

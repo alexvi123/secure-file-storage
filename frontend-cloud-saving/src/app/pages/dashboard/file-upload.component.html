@@ -1,0 +1,90 @@
+<!-- src/app/pages/dashboard/file-upload.component.html -->
+<div class="upload-container">
+  <header class="upload-header">
+    <h1>Încărcare fișiere</h1>
+    <p>Selectează și încarcă fișierele tale</p>
+  </header>
+
+  <div class="file-upload-section">
+    <input 
+      type="file" 
+      #fileInput
+      (change)="onFileSelected($event)"
+      multiple
+      class="file-input"
+      id="fileInput"
+    >
+    <div 
+      class="drag-drop-zone" 
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDropFiles($event)"
+      (click)="fileInput.click()"
+    >
+      <div class="drag-drop-content">
+        <i class="fa fa-cloud-upload"></i>
+        <p>Trage și plasează fișierele aici sau click pentru a selecta</p>
+        <small>Maxim 10 fișiere, fiecare sub 500 MB</small>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="selectedFiles.length > 0" class="selected-files-section">
+    <h3>Fișiere selectate ({{ selectedFiles.length }})</h3>
+    <ul class="file-list">
+      <li *ngFor="let file of selectedFiles" class="file-item">
+        <div class="file-info">
+          <i class="fa" [ngClass]="{
+            'fa-file-image-o': file.type.startsWith('image/'),
+            'fa-file-pdf-o': file.type === 'application/pdf',
+            'fa-file-word-o': file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'fa-file-excel-o': file.type === 'application/vnd.ms-excel' || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'fa-file-video-o': file.type.startsWith('video/'),
+            'fa-file-audio-o': file.type.startsWith('audio/'),
+            'fa-file-o': true
+          }"></i>
+          <span>{{ file.name }}</span>
+          <span class="file-size">{{ formatFileSize(file.size) }}</span>
+        </div>
+        <button 
+          class="remove-file-btn" 
+          (click)="removeFile(file)"
+          aria-label="Șterge fișier"
+        >
+          <i class="fa fa-trash"></i>
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div *ngIf="successMessage" class="success-message">
+    <i class="fa fa-check-circle"></i>
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    <i class="fa fa-exclamation-triangle"></i>
+    {{ error }}
+  </div>
+
+  <div *ngIf="uploadProgress !== null" class="upload-progress-section">
+    <div class="progress-container">
+      <div 
+        class="progress-bar" 
+        [style.width.%]="uploadProgress"
+      ></div>
+      <span class="progress-text">{{ uploadProgress }}% Încărcat</span>
+    </div>
+  </div>
+
+  <div class="upload-actions">
+    <button 
+      class="upload-btn"
+      (click)="uploadFiles()" 
+      [disabled]="selectedFiles.length === 0 || isUploading"
+    >
+      <i class="fa" [ngClass]="isUploading ? 'fa-spinner fa-spin' : 'fa-upload'"></i>
+      {{ isUploading ? 'Se încarcă...' : 'Încarcă fișiere' }}
+    </button>
+  </div>
+</div>

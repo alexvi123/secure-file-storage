@@ -25,10 +25,7 @@ const app = express();
 // Conectare la baza de date PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
+  ssl: false, // Explicitly disable SSL
 });
 
 // Verifică conexiunea la baza de date
@@ -59,7 +56,7 @@ const apiLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 
 // Middleware pentru parsarea cererii
-app.use(cors()); // Permite cereri cross-origin
+app.use(cors()); // Allow all origins
 app.use(express.json({ limit: "50mb" })); // Limită mărită pentru încărcarea fișierelor
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 

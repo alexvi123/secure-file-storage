@@ -5,13 +5,14 @@ import { RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { FileService, FileStats } from '../../services/file.service';
 import { AuthService, User } from '../../services/auth.service';
 import { MonthLabelPipe } from '../../pipes/month-label.pipe';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, MonthLabelPipe]
+  imports: [CommonModule, RouterLink, RouterLinkActive, MonthLabelPipe, RouterModule]
 })
 export class DashboardComponent implements OnInit {
   currentUser: User | null = null;

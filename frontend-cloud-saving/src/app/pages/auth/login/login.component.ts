@@ -67,6 +67,8 @@ export class LoginComponent implements OnInit {
         next: (response) => {
           // Dacă este necesară autentificarea cu doi factori
           if (response.require2FA) {
+            console.log('Temporary token received:', response.tempToken);
+            console.log('Raspunsul: ', response);
             this.router.navigate(['/auth/two-factor'], {
               queryParams: {
                 tempToken: response.tempToken,
