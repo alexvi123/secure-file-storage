@@ -129,3 +129,81 @@
   @keyframes spinner-border {
     to { transform: rotate(360deg); }
   }
+  /* Add these styles to your existing register.component.scss file */
+
+/* Two Factor Authentication Setup Styles */
+.two-factor-info {
+  margin-top: 20px;
+}
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.qr-code {
+  max-width: 200px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  background: white;
+}
+
+.secret-key-container {
+  margin: 15px 0;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.secret-key {
+  font-family: monospace;
+  font-size: 16px;
+  letter-spacing: 2px;
+  background-color: #e9ecef;
+  padding: 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 5px;
+  word-break: break-all;
+}
+
+.verification-input {
+  margin: 20px 0;
+}
+
+.code-input {
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 5px;
+  font-weight: 600;
+}
+
+.two-factor-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.two-factor-actions .btn {
+  width: 48%;
+}
+
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .two-factor-actions {
+    flex-direction: column;
+  }
+  
+  .two-factor-actions .btn {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}

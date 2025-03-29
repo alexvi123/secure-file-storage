@@ -1,109 +1,168 @@
 <!-- src/app/pages/auth/register/register.component.html -->
 <div class="register-container">
-    <div class="register-card">
-      <h2>Înregistrare</h2>
+  <!-- Registration Form -->
+  <div class="register-card" *ngIf="!showTwoFactorSetup">
+    <h2>Înregistrare</h2>
+    
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <!-- Erori -->
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
       
-      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
-        <!-- Erori -->
-        <div *ngIf="errorMessage" class="alert alert-danger">
-          {{ errorMessage }}
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email" 
+          class="form-control" 
+          [ngClass]="{ 'is-invalid': submitted && f['email'].errors }"
+        />
+        <div *ngIf="submitted && f['email'].errors" class="invalid-feedback">
+          <div *ngIf="f['email'].errors['required']">Email este obligatoriu</div>
+          <div *ngIf="f['email'].errors['email']">Introduceți un email valid</div>
         </div>
-        
-        <div class="form-group">
-          <label for="email">Email</label>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="name">Nume</label>
           <input 
-            type="email" 
-            id="email" 
-            formControlName="email" 
+            type="text" 
+            id="name" 
+            formControlName="name" 
             class="form-control" 
-            [ngClass]="{ 'is-invalid': submitted && f['email'].errors }"
+            [ngClass]="{ 'is-invalid': submitted && f['name'].errors }"
           />
-          <div *ngIf="submitted && f['email'].errors" class="invalid-feedback">
-            <div *ngIf="f['email'].errors['required']">Email este obligatoriu</div>
-            <div *ngIf="f['email'].errors['email']">Introduceți un email valid</div>
+          <div *ngIf="submitted && f['name'].errors" class="invalid-feedback">
+            <div *ngIf="f['name'].errors['required']">Numele este obligatoriu</div>
           </div>
         </div>
         
-        <div class="form-row">
-          <div class="form-group col-md-6">
-            <label for="name">Nume</label>
-            <input 
-              type="text" 
-              id="name" 
-              formControlName="name" 
-              class="form-control" 
-              [ngClass]="{ 'is-invalid': submitted && f['name'].errors }"
-            />
-            <div *ngIf="submitted && f['name'].errors" class="invalid-feedback">
-              <div *ngIf="f['name'].errors['required']">Numele este obligatoriu</div>
-            </div>
-          </div>
-          
-          <div class="form-group col-md-6">
-            <label for="surname">Prenume</label>
-            <input 
-              type="text" 
-              id="surname" 
-              formControlName="surname" 
-              class="form-control" 
-              [ngClass]="{ 'is-invalid': submitted && f['surname'].errors }"
-            />
-            <div *ngIf="submitted && f['surname'].errors" class="invalid-feedback">
-              <div *ngIf="f['surname'].errors['required']">Prenumele este obligatoriu</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="phone_number">Număr de telefon</label>
+        <div class="form-group col-md-6">
+          <label for="surname">Prenume</label>
           <input 
-            type="tel" 
-            id="phone_number" 
-            formControlName="phone_number" 
-            class="form-control"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="password">Parolă</label>
-          <input 
-            type="password" 
-            id="password" 
-            formControlName="password" 
+            type="text" 
+            id="surname" 
+            formControlName="surname" 
             class="form-control" 
-            [ngClass]="{ 'is-invalid': submitted && f['password'].errors }"
+            [ngClass]="{ 'is-invalid': submitted && f['surname'].errors }"
           />
-          <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
-            <div *ngIf="f['password'].errors['required']">Parola este obligatorie</div>
-            <div *ngIf="f['password'].errors['minlength']">Parola trebuie să aibă cel puțin 6 caractere</div>
+          <div *ngIf="submitted && f['surname'].errors" class="invalid-feedback">
+            <div *ngIf="f['surname'].errors['required']">Prenumele este obligatoriu</div>
           </div>
         </div>
-        
-        <div class="form-group">
-          <label for="confirmPassword">Confirmare parolă</label>
-          <input 
-            type="password" 
-            id="confirmPassword" 
-            formControlName="confirmPassword" 
-            class="form-control" 
-            [ngClass]="{ 'is-invalid': submitted && f['confirmPassword'].errors }"
-          />
-          <div *ngIf="submitted && f['confirmPassword'].errors" class="invalid-feedback">
-            <div *ngIf="f['confirmPassword'].errors['required']">Confirmarea parolei este obligatorie</div>
-            <div *ngIf="f['confirmPassword'].errors['mustMatch']">Parolele nu corespund</div>
-          </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="phone_number">Număr de telefon</label>
+        <input 
+          type="tel" 
+          id="phone_number" 
+          formControlName="phone_number" 
+          class="form-control"
+        />
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Parolă</label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password" 
+          class="form-control" 
+          [ngClass]="{ 'is-invalid': submitted && f['password'].errors }"
+        />
+        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+          <div *ngIf="f['password'].errors['required']">Parola este obligatorie</div>
+          <div *ngIf="f['password'].errors['minlength']">Parola trebuie să aibă cel puțin 6 caractere</div>
         </div>
-        
-        <div class="form-group">
-          <button [disabled]="loading" class="btn btn-primary btn-block">
-            <span *ngIf="loading" class="spinner-border spinner-border-sm mr-1"></span>
-            Înregistrare
-          </button>
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmPassword">Confirmare parolă</label>
+        <input 
+          type="password" 
+          id="confirmPassword" 
+          formControlName="confirmPassword" 
+          class="form-control" 
+          [ngClass]="{ 'is-invalid': submitted && f['confirmPassword'].errors }"
+        />
+        <div *ngIf="submitted && f['confirmPassword'].errors" class="invalid-feedback">
+          <div *ngIf="f['confirmPassword'].errors['required']">Confirmarea parolei este obligatorie</div>
+          <div *ngIf="f['confirmPassword'].errors['mustMatch']">Parolele nu corespund</div>
         </div>
+      </div>
+      
+      <div class="form-group">
+        <button [disabled]="loading" class="btn btn-primary btn-block">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm mr-1"></span>
+          Înregistrare
+        </button>
+      </div>
+      
+      <div class="text-center mt-3">
+        Aveți deja un cont? <a routerLink="/auth/login">Autentificare</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Two Factor Authentication Setup -->
+  <div class="register-card" *ngIf="showTwoFactorSetup">
+    <h2>Configurare autentificare în doi pași</h2>
+    
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="twoFactorEnabled" class="alert alert-success">
+      Autentificarea în doi pași a fost activată cu succes! Veți fi redirecționat în curând.
+    </div>
+    
+    <div class="two-factor-info">
+      <p>Autentificarea în doi pași adaugă un strat suplimentar de securitate pentru contul dumneavoastră.</p>
+      <p>Scanați codul QR cu o aplicație de autentificare precum Google Authenticator sau Authy.</p>
+      
+      <div class="qr-code-container" *ngIf="qrCodeUrl">
+        <img [src]="qrCodeUrl" alt="QR Code pentru 2FA" class="qr-code">
+      </div>
+      
+      <div class="secret-key-container" *ngIf="secret2FA">
+        <p>Dacă nu puteți scana codul QR, introduceți această cheie secretă manual:</p>
+        <code class="secret-key">{{ secret2FA }}</code>
+      </div>
+      
+      <div class="verification-input">
+        <label for="twoFactorCode">Introduceți codul din aplicație</label>
+        <input 
+          type="text" 
+          id="twoFactorCode"
+          [(ngModel)]="twoFactorCode"
+          class="form-control code-input"
+          maxlength="6"
+          placeholder="123456"
+        />
+      </div>
+      
+      <div class="two-factor-actions">
+        <button 
+          class="btn btn-primary" 
+          [disabled]="loading || twoFactorEnabled" 
+          (click)="activateTwoFactor()"
+        >
+          <span *ngIf="loading" class="spinner-border spinner-border-sm mr-1"></span>
+          Activează 2FA
+        </button>
         
-        <div class="text-center mt-3">
-          Aveți deja un cont? <a routerLink="/auth/login">Autentificare</a>
-        </div>
-      </form>
+        <button 
+          class="btn btn-secondary" 
+          [disabled]="loading || twoFactorEnabled" 
+          (click)="skipTwoFactorSetup()"
+        >
+          Configurez mai târziu
+        </button>
+      </div>
     </div>
   </div>
+</div>
