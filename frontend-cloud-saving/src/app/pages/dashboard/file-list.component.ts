@@ -74,7 +74,6 @@ export class FileListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Eroare la descărcare:', err);
-        // Eventual, afișează un mesaj de eroare
       }
     });
   }
@@ -89,7 +88,6 @@ export class FileListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Eroare la ștergere:', err);
-        // Eventual, afișează un mesaj de eroare
       }
     });
   }
@@ -111,7 +109,6 @@ export class FileListComponent implements OnInit {
         })
         .catch(err => {
           console.error('Eroare la ștergere în masă:', err);
-          // Eventual, afișează un mesaj de eroare
         });
     }
   }

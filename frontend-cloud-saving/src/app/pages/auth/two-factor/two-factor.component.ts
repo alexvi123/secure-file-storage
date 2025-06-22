@@ -1,4 +1,3 @@
-// src/app/pages/auth/two-factor/two-factor.component.ts
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -42,7 +41,7 @@ export class TwoFactorComponent implements OnInit {
     }
   }
 
-  // Getter pentru acces ușor la câmpurile formularului
+  // Getter pentru acces la câmpurile formularului
   get f() { return this.twoFactorForm.controls; }
 
   onSubmit() {
@@ -79,7 +78,7 @@ export class TwoFactorComponent implements OnInit {
       (event.keyCode >= 35 && event.keyCode <= 39)) {
       return true;
     }
-    // Asigură-te că este o cifră și că nu sunt mai mult de 6 cifre
+    // Asigurare că este o cifră și că nu sunt mai mult de 6 cifre
     if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) &&
       (event.keyCode < 96 || event.keyCode > 105) ||
       (this.f['code'].value?.length >= 6 && event.keyCode !== 8)) {

@@ -1,9 +1,9 @@
-// src/app/pages/dashboard/file-upload.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FileService } from '../../services/file.service';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-file-upload',
@@ -18,14 +18,18 @@ export class FileUploadComponent implements OnInit {
   isUploading = false;
   error: string | null = null;
   successMessage: string | null = null;
-
+  private uploadSubscription?: Subscription;
   constructor(
     private fileService: FileService,
     private router: Router
   ) { }
 
   ngOnInit(): void { }
-
+  ngOnDestroy(): void {
+    if (this.uploadSubscription) {
+      this.uploadSubscription.unsubscribe();
+    }
+  }
   onFileSelected(event: any): void {
     const files: FileList = event.target.files;
     this.addFiles(files);
@@ -55,7 +59,6 @@ export class FileUploadComponent implements OnInit {
   }
 
   addFiles(files: FileList): void {
-    // Limită: Maximum 10 fișiere
     const maxFiles = 10;
     const maxFileSize = 1024 * 1024 * 500; // 500 MB
 
@@ -93,21 +96,24 @@ export class FileUploadComponent implements OnInit {
   }
 
   uploadFiles(): void {
-    console.log('Buton de upload apăsat!'); // Adaugă această linie
+    console.log('Buton de upload apăsat!');
     console.log('Fișiere selectate:', this.selectedFiles);
     if (this.selectedFiles.length === 0) {
       this.error = 'Nu ați selectat niciun fișier pentru încărcare';
       return;
     }
 
-    // For now, let's handle only the first file
     const fileToUpload = this.selectedFiles[0];
     this.isUploading = true;
     this.uploadProgress = 0;
     this.error = null;
     this.successMessage = null;
 
-    this.fileService.uploadFile(fileToUpload).subscribe({
+    if (this.uploadSubscription) {
+      this.uploadSubscription.unsubscribe();
+    }
+
+    this.uploadSubscription = this.fileService.uploadFile(fileToUpload).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round(100 * event.loaded / event.total);
@@ -129,9 +135,11 @@ export class FileUploadComponent implements OnInit {
         this.isUploading = false;
         this.error = `Eroare la încărcarea fișierului: ${err.message || 'A apărut o eroare necunoscută'}`;
         console.error('Upload error:', err);
+        this.uploadSubscription = undefined; // Curăță referința
       },
       complete: () => {
         this.isUploading = false;
+        this.uploadSubscription = undefined; // Curăță referința
       }
     });
   }

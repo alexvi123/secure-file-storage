@@ -4,7 +4,9 @@ const { promisify } = require("util");
 const axios = require("axios");
 const crypto = require("crypto");
 const { ApiError } = require("../middlewares/error.middleware");
-const { cleanupTempFiles } = require("../middlewares/upload.middleware");
+const {
+  cleanupTempFileMiddleware,
+} = require("../middlewares/upload.middleware");
 const fileProcessorService = require("../services/file-processor.service");
 const containerService = require("../services/container.service");
 
@@ -31,20 +33,18 @@ const uploadFile = async (req, res, next) => {
     // Citește fișierul
     const fileBuffer = await readFileAsync(filePath);
 
-    // Generează un hash pentru fișier (pentru integritate și verificări de duplicare)
+    // Generează un hash pentru fișier
     const fileHash = crypto
       .createHash("sha256")
       .update(fileBuffer)
       .digest("hex");
 
-    // Fragmente numărul de containere disponibile
     const numContainers = await containerService.getContainerCount();
     if (numContainers === 0) {
       throw ApiError.internalError(
         "Nu sunt disponibile containere de stocare."
       );
     }
-
     // Fragmentează fișierul
     const fragments = fileProcessorService.splitFile(fileBuffer, numContainers);
 
@@ -68,8 +68,11 @@ const uploadFile = async (req, res, next) => {
     // Distribuie fragmentele în containere
     const fragmentPromises = fragments.map(async (fragment, index) => {
       // Alege un container aleatoriu
-      const containerId = await containerService.getRandomContainerId();
-
+      const containerId =
+        await containerService.getBalancedContainerForFragment(
+          db,
+          fragment.length
+        );
       // Generează un nume unic pentru fragment
       const fragmentName = `${fileHash}_${index}_${Date.now()}`;
 
@@ -79,8 +82,20 @@ const uploadFile = async (req, res, next) => {
         .update(fragment)
         .digest("hex");
 
-      // Trimite fragmentul la containerul ales
-      await containerService.storeFragment(containerId, fragmentName, fragment);
+      try {
+        await containerService.storeFragmentWithStorageUpdate(
+          db,
+          containerId,
+          fragmentName,
+          fragment
+        );
+        console.log(
+          `[UPLOAD] Fragment stored and storage updated for container ${containerId}`
+        );
+      } catch (error) {
+        console.error(`[UPLOAD ERROR] Failed to store fragment:`, error);
+        throw error;
+      }
 
       // Stochează informația despre fragment în baza de date
       await db.query(
@@ -118,9 +133,8 @@ const uploadFile = async (req, res, next) => {
   } catch (error) {
     next(error);
   } finally {
-    // Curățare fișier temporar după procesare
     if (filePath) {
-      cleanupTempFiles(filePath);
+      cleanupTempFileMiddleware(filePath);
     }
   }
 };
@@ -281,7 +295,7 @@ const downloadFile = async (req, res, next) => {
       })
     );
 
-    // Sortează fragmentele după index (pentru a ne asigura că sunt în ordinea corectă)
+    // Sortează fragmentele după index pentru a ne asigura că sunt în ordinea corectă
     fragmentBuffers.sort((a, b) => a.index - b.index);
 
     // Reasamblează fișierul din fragmente
@@ -344,29 +358,31 @@ const deleteFile = async (req, res, next) => {
             `Eroare la ștergerea fragmentului ${fragment.fragment_name}:`,
             error
           );
-          // Continuă cu celelalte ștergeri chiar dacă una eșuează
         }
       })
     );
 
-    // Începe tranzacția pentru ștergerea din baza de date
     await db.query("BEGIN");
 
     try {
-      // Șterge fragmentele din baza de date
       await db.query("DELETE FROM fragments WHERE file_id = $1", [fileId]);
-
-      // Șterge înregistrarea fișierului
       await db.query("DELETE FROM files WHERE id = $1", [fileId]);
 
-      // Comite tranzacția
       await db.query("COMMIT");
     } catch (error) {
-      // Revine la starea anterioară în caz de eroare
       await db.query("ROLLBACK");
       throw error;
     }
+    const containerService = require("../services/container.service");
 
+    console.log(`[DELETE] About to sync all containers storage`);
+    try {
+      await containerService.syncAllContainersStorage(db);
+      console.log(`[DELETE] All containers storage synced successfully`);
+    } catch (error) {
+      console.error(`[DELETE ERROR] Failed to sync storage:`, error);
+      throw error;
+    }
     res.status(200).json({
       message: "Fișierul și toate fragmentele sale au fost șterse cu succes.",
     });
@@ -401,7 +417,6 @@ const updateFile = async (req, res, next) => {
       );
     }
 
-    // Actualizează numele original al fișierului
     await db.query(
       `UPDATE files SET original_name = $1, updated_at = NOW() WHERE id = $2`,
       [newName, fileId]
@@ -411,64 +426,6 @@ const updateFile = async (req, res, next) => {
       message: "Numele fișierului a fost actualizat cu succes.",
       fileId,
       newName,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Caută fișiere după nume sau alte criterii
- */
-const searchFiles = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { query } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const db = req.app.locals.db;
-
-    if (!query) {
-      throw ApiError.badRequest("Termenul de căutare este obligatoriu.");
-    }
-
-    // Caută în numele originale ale fișierelor
-    const searchTerm = `%${query}%`;
-
-    // Obține numărul total de rezultate
-    const countResult = await db.query(
-      `SELECT COUNT(*) FROM files 
-       WHERE user_id = $1 AND original_name ILIKE $2`,
-      [userId, searchTerm]
-    );
-    const totalFiles = parseInt(countResult.rows[0].count);
-
-    // Obține rezultatele pentru pagina curentă
-    const filesResult = await db.query(
-      `SELECT id, original_name, mime_type, size_bytes, created_at
-       FROM files
-       WHERE user_id = $1 AND original_name ILIKE $2
-       ORDER BY created_at DESC
-       LIMIT $3 OFFSET $4`,
-      [userId, searchTerm, limit, offset]
-    );
-
-    // Calculează informații despre paginare
-    const totalPages = Math.ceil(totalFiles / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
-
-    res.status(200).json({
-      files: filesResult.rows,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        limit,
-        totalFiles,
-        hasNextPage,
-        hasPrevPage,
-      },
     });
   } catch (error) {
     next(error);
@@ -515,7 +472,7 @@ const getUserStats = async (req, res, next) => {
       [userId]
     );
 
-    // Obține statistici lunare (ultimele 6 luni)
+    // Obține statistici lunare
     const monthlyStatsResult = await db.query(
       `SELECT 
          TO_CHAR(created_at, 'YYYY-MM') as month,
@@ -578,6 +535,5 @@ module.exports = {
   downloadFile,
   deleteFile,
   updateFile,
-  searchFiles,
   getUserStats,
 };

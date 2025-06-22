@@ -13,6 +13,7 @@ export interface User {
     name: string;
     surname: string;
     phone_number?: string;
+    role: string;
     two_factor_enabled: boolean;
 }
 
@@ -72,6 +73,51 @@ export class AuthService {
             }),
             catchError(this.handleError)
         );
+    }
+
+
+    /**
+     * Inițializează procesul de resetare a parolei
+     * @param email Adresa de email a utilizatorului
+     * @returns Observable cu rezultatul procesului de resetare
+     */
+    forgotPassword(email: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/forgot-password`, { email })
+            .pipe(catchError(this.handleError));
+    }
+
+    /**
+     * Verifică codul de resetare primit prin email
+     * @param email Adresa de email a utilizatorului
+     * @param resetCode Codul de resetare primit prin email
+     * @returns Observable cu rezultatul verificării
+     */
+    verifyResetCode(email: string, resetCode: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/verify-reset-code`, { email, resetCode })
+            .pipe(catchError(this.handleError));
+    }
+
+    /**
+     * Verifică resetarea parolei cu autentificare în doi pași
+     * @param email Adresa de email a utilizatorului
+     * @param twoFactorCode Codul de autentificare în doi pași
+     * @param resetToken Tokenul de resetare primit prin email
+     * @returns Observable cu rezultatul verificării
+     */
+    verifyResetWith2FA(email: string, twoFactorCode: string, resetToken: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/verify-reset-2fa`, { email, twoFactorCode, resetToken })
+            .pipe(catchError(this.handleError));
+    }
+
+    /**
+     * Confirmă resetarea parolei
+     * @param resetToken Tokenul de resetare primit prin email
+     * @param newPassword Noua parolă a utilizatorului
+     * @returns Observable cu rezultatul confirmării
+     */
+    resetPassword(resetToken: string, newPassword: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/reset-password`, { token: resetToken, newPassword })
+            .pipe(catchError(this.handleError));
     }
 
     logout(): void {
@@ -167,7 +213,7 @@ export class AuthService {
             localStorage.setItem('auth_token', authResult.token);
             localStorage.setItem('user', JSON.stringify(authResult.user));
             this.currentUserSubject.next(authResult.user);
-            this.autoLogout(24 * 60 * 60 * 1000); // Auto logout după 24 ore
+            this.autoLogout(0.5 * 60 * 60 * 1000); // Auto logout după 30min
         }
     }
 

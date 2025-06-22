@@ -7,10 +7,6 @@ const { ApiError } = require("../middlewares/error.middleware");
  * Service pentru gestionarea autentificării
  */
 class AuthService {
-  /**
-   * Inițializează serviciul de autentificare
-   * @param {Object} db - Conexiunea la baza de date
-   */
   constructor(db) {
     this.db = db;
   }
@@ -136,7 +132,7 @@ class AuthService {
       secret: secret,
       encoding: "base32",
       token: token,
-      window: 1, // Permite o fereastră de 30 secunde în plus (anterior sau după)
+      window: 1,
     });
   }
 
@@ -448,10 +444,6 @@ class AuthService {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-
-    // Salvează token-ul în baza de date (opțional)
-    // Acest pas poate fi omis dacă token-ul este verificat doar prin JWT
-
     return resetToken;
   }
 
@@ -462,7 +454,6 @@ class AuthService {
    * @returns {Promise<boolean>} Succes
    */
   async resetPassword(token, newPassword) {
-    // Verifică token-ul
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -551,12 +542,10 @@ class AuthService {
    * @returns {Promise<Object>} Datele actualizate
    */
   async updateUserProfile(userId, userData) {
-    // Construiește setările pentru actualizare
     const setValues = [];
     const queryParams = [];
     let paramCounter = 1;
 
-    // Adaugă câmpurile care trebuie actualizate
     if (userData.name !== undefined) {
       setValues.push(`name = $${paramCounter++}`);
       queryParams.push(userData.name);
@@ -572,13 +561,10 @@ class AuthService {
       queryParams.push(userData.phone_number);
     }
 
-    // Adaugă timestamp-ul de actualizare
     setValues.push(`updated_at = NOW()`);
 
-    // Adaugă ID-ul utilizatorului
     queryParams.push(userId);
 
-    // Execută query-ul numai dacă există câmpuri de actualizat
     if (setValues.length === 0) {
       throw ApiError.badRequest("Niciun câmp furnizat pentru actualizare.");
     }

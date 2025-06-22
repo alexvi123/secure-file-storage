@@ -1,8 +1,7 @@
-<!-- src/app/pages/dashboard/file-upload.component.html -->
 <div class="upload-container">
   <header class="upload-header">
-    <h1>Încărcare fișiere</h1>
-    <p>Selectează și încarcă fișierele tale</p>
+    <h1>Încărcare fișier</h1>
+    <p>Selectează și încarcă fișierul</p>
   </header>
 
   <div class="file-upload-section">
@@ -23,14 +22,14 @@
     >
       <div class="drag-drop-content">
         <i class="fa fa-cloud-upload"></i>
-        <p>Trage și plasează fișierele aici sau click pentru a selecta</p>
-        <small>Maxim 10 fișiere, fiecare sub 500 MB</small>
+        <p>Trage și plasează fișierul aici sau click pentru a selecta</p>
+        <small>Maxim 1 fișier cu dimensiunea sub 500 MB</small>
       </div>
     </div>
   </div>
 
   <div *ngIf="selectedFiles.length > 0" class="selected-files-section">
-    <h3>Fișiere selectate ({{ selectedFiles.length }})</h3>
+    <h3>Fișier selectat </h3>
     <ul class="file-list">
       <li *ngFor="let file of selectedFiles" class="file-item">
         <div class="file-info">
@@ -84,7 +83,7 @@
       [disabled]="selectedFiles.length === 0 || isUploading"
     >
       <i class="fa" [ngClass]="isUploading ? 'fa-spinner fa-spin' : 'fa-upload'"></i>
-      {{ isUploading ? 'Se încarcă...' : 'Încarcă fișiere' }}
+      {{ isUploading ? 'Se încarcă...' : 'Încarcă fișier' }}
     </button>
   </div>
 </div>

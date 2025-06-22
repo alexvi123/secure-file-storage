@@ -1,10 +1,8 @@
-// src/app/pages/dashboard/dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { FileService, FileStats } from '../../services/file.service';
 import { AuthService, User } from '../../services/auth.service';
-import { MonthLabelPipe } from '../../pipes/month-label.pipe';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -12,7 +10,7 @@ import { RouterModule } from '@angular/router';
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, MonthLabelPipe, RouterModule]
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterModule]
 })
 export class DashboardComponent implements OnInit {
   currentUser: User | null = null;

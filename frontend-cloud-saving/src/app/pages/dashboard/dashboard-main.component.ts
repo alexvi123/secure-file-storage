@@ -5,10 +5,10 @@ import { FileService } from '../../services/file.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
-    selector: 'app-dashboard-main',
-    standalone: true,
-    imports: [CommonModule, RouterModule],
-    template: `
+  selector: 'app-dashboard-main',
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  template: `
     <div class="dashboard-main-content">
       <div class="content-header">
         <h1>Tablou de bord</h1>
@@ -78,16 +78,7 @@ import { AuthService } from '../../services/auth.service';
         </div>
       </div>
       
-      <div *ngIf="!loading && !error && stats?.monthlyActivity?.length" class="activity-section">
-        <h2>Activitate lunară</h2>
-        <div class="activity-chart">
-          <div *ngFor="let month of stats?.monthlyActivity" class="activity-bar">
-            <div class="bar-value" [style.height.%]="getBarHeight(month.count)"></div>
-            <div class="bar-label">{{ month.month }}</div>
-          </div>
-        </div>
-      </div>
-      
+  
       <div class="upload-cta">
         <a routerLink="/dashboard/upload" class="btn btn-primary">
           <i class="fa fa-upload"></i> Încarcă fișiere noi
@@ -95,43 +86,43 @@ import { AuthService } from '../../services/auth.service';
       </div>
     </div>
   `,
-    styleUrls: ['./dashboard.component.css'] // Poți folosi stilurile existente
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardMainComponent implements OnInit {
-    stats: any = null;
-    loading = true;
-    error: string | null = null;
+  stats: any = null;
+  loading = true;
+  error: string | null = null;
 
-    constructor(
-        private fileService: FileService,
-        private authService: AuthService
-    ) { }
+  constructor(
+    private fileService: FileService,
+    private authService: AuthService
+  ) { }
 
-    ngOnInit(): void {
-        this.loadStats();
+  ngOnInit(): void {
+    this.loadStats();
+  }
+
+  loadStats(): void {
+    this.fileService.getUserStats().subscribe({
+      next: (stats) => {
+        this.stats = stats;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.error = error.message || 'Nu s-au putut încărca statisticile';
+        this.loading = false;
+      }
+    });
+  }
+
+  getBarHeight(count: number): number {
+    if (!this.stats || !this.stats.monthlyActivity || this.stats.monthlyActivity.length === 0) {
+      return 0;
     }
 
-    loadStats(): void {
-        this.fileService.getUserStats().subscribe({
-            next: (stats) => {
-                this.stats = stats;
-                this.loading = false;
-            },
-            error: (error) => {
-                this.error = error.message || 'Nu s-au putut încărca statisticile';
-                this.loading = false;
-            }
-        });
-    }
+    const maxCount = Math.max(...this.stats.monthlyActivity.map((item: any) => item.count));
+    if (maxCount === 0) return 0;
 
-    getBarHeight(count: number): number {
-        if (!this.stats || !this.stats.monthlyActivity || this.stats.monthlyActivity.length === 0) {
-            return 0;
-        }
-
-        const maxCount = Math.max(...this.stats.monthlyActivity.map((item: any) => item.count));
-        if (maxCount === 0) return 0;
-
-        return (count / maxCount) * 100;
-    }
+    return (count / maxCount) * 100;
+  }
 }

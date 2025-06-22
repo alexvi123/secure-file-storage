@@ -2,35 +2,77 @@ const { ApiError } = require("../middlewares/error.middleware");
 const containerService = require("../services/container.service");
 
 /**
- * Obține lista tuturor utilizatorilor
+ * Obținere listă utilizatori
  */
 const getAllUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const search = req.query.search || "";
     const db = req.app.locals.db;
 
-    // Obține numărul total de utilizatori
-    const countResult = await db.query("SELECT COUNT(*) FROM users");
+    // Query cu search și storage info
+    let whereClause = "";
+    let queryParams = [limit, offset];
+
+    if (search) {
+      whereClause = `WHERE (u.name ILIKE $3 OR u.surname ILIKE $3 OR u.email ILIKE $3)`;
+      queryParams.push(`%${search}%`);
+    }
+
+    // Obținere utilizatori cu informații de storage
+    const usersQuery = `
+      SELECT 
+        u.id, 
+        u.email, 
+        u.name, 
+        u.surname, 
+        u.phone_number, 
+        u.two_factor_enabled, 
+        u.created_at,
+        COUNT(f.id) as file_count,
+        COALESCE(SUM(f.size_bytes), 0) as storage_used
+      FROM users u
+      LEFT JOIN files f ON u.id = f.user_id
+      ${whereClause}
+      GROUP BY u.id, u.email, u.name, u.surname, u.phone_number, u.two_factor_enabled, u.created_at
+      ORDER BY u.created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const usersResult = await db.query(usersQuery, queryParams);
+
+    // Obținere număr total cu search
+    const countQuery = search
+      ? `SELECT COUNT(DISTINCT u.id) FROM users u ${whereClause}`
+      : `SELECT COUNT(*) FROM users`;
+
+    const countParams = search ? [`%${search}%`] : [];
+    const countResult = await db.query(countQuery, countParams);
     const totalUsers = parseInt(countResult.rows[0].count);
 
-    // Obține utilizatorii pentru pagina curentă
-    const usersResult = await db.query(
-      `SELECT id, email, name, surname, phone_number, two_factor_enabled, created_at, updated_at
-       FROM users
-       ORDER BY created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+    // Formatare date utilizator
+    const formattedUsers = usersResult.rows.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      surname: user.surname,
+      phone_number: user.phone_number,
+      two_factor_enabled: user.two_factor_enabled,
+      created_at: user.created_at,
+      fileCount: parseInt(user.file_count),
+      storageUsed: parseInt(user.storage_used),
+      storageUsedFormatted: formatBytes(parseInt(user.storage_used)),
+    }));
 
-    // Calculează informații despre paginare
+    // Calculare informații despre paginare
     const totalPages = Math.ceil(totalUsers / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
     res.status(200).json({
-      users: usersResult.rows,
+      users: formattedUsers,
       pagination: {
         currentPage: page,
         totalPages,
@@ -41,19 +83,20 @@ const getAllUsers = async (req, res, next) => {
       },
     });
   } catch (error) {
+    console.error("Eroare la obținerea utilizatorilor:", error);
     next(error);
   }
 };
 
 /**
- * Obține detalii despre un utilizator specific
+ * Obținere detalii despre un utilizator specific
  */
 const getUserById = async (req, res, next) => {
   try {
     const userId = req.params.id;
     const db = req.app.locals.db;
 
-    // Obține informațiile despre utilizator
+    // Obținere informații despre utilizator
     const userResult = await db.query(
       `SELECT id, email, name, surname, phone_number, two_factor_enabled, created_at, updated_at
        FROM users
@@ -67,7 +110,7 @@ const getUserById = async (req, res, next) => {
 
     const user = userResult.rows[0];
 
-    // Obține statistici despre fișierele utilizatorului
+    // Obținere statistici despre fișierele utilizatorului
     const fileStatsResult = await db.query(
       `SELECT COUNT(*) as file_count, SUM(size_bytes) as total_size
        FROM files
@@ -75,12 +118,12 @@ const getUserById = async (req, res, next) => {
       [userId]
     );
 
-    // Adaugă statisticile la obiectul utilizator
+    // Adăugare statistici la obiectul utilizator
     user.fileCount = parseInt(fileStatsResult.rows[0].file_count) || 0;
     user.totalStorage = parseInt(fileStatsResult.rows[0].total_size) || 0;
     user.totalStorageFormatted = formatBytes(user.totalStorage);
 
-    // Obține ultimele 5 fișiere
+    // Obținere ultimele 5 fișiere
     const recentFilesResult = await db.query(
       `SELECT id, original_name, mime_type, size_bytes, created_at
        FROM files
@@ -99,97 +142,14 @@ const getUserById = async (req, res, next) => {
 };
 
 /**
- * Actualizează informațiile unui utilizator
- */
-const updateUser = async (req, res, next) => {
-  try {
-    const userId = req.params.id;
-    const { name, surname, phone_number, email } = req.body;
-    const db = req.app.locals.db;
-
-    // Verifică dacă utilizatorul există
-    const userExists = await db.query("SELECT id FROM users WHERE id = $1", [
-      userId,
-    ]);
-
-    if (userExists.rows.length === 0) {
-      throw ApiError.notFound("Utilizatorul nu a fost găsit.");
-    }
-
-    // Construiește query-ul de actualizare
-    const updateFields = [];
-    const values = [];
-    let paramCounter = 1;
-
-    if (name !== undefined) {
-      updateFields.push(`name = $${paramCounter++}`);
-      values.push(name);
-    }
-
-    if (surname !== undefined) {
-      updateFields.push(`surname = $${paramCounter++}`);
-      values.push(surname);
-    }
-
-    if (phone_number !== undefined) {
-      updateFields.push(`phone_number = $${paramCounter++}`);
-      values.push(phone_number);
-    }
-
-    if (email !== undefined) {
-      // Verifică dacă email-ul este deja utilizat de alt utilizator
-      const emailCheck = await db.query(
-        "SELECT id FROM users WHERE email = $1 AND id != $2",
-        [email, userId]
-      );
-
-      if (emailCheck.rows.length > 0) {
-        throw ApiError.conflict(
-          "Acest email este deja utilizat de alt utilizator."
-        );
-      }
-
-      updateFields.push(`email = $${paramCounter++}`);
-      values.push(email);
-    }
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({
-        message: "Niciun câmp furnizat pentru actualizare.",
-      });
-    }
-
-    // Adaugă ID-ul utilizatorului ca ultimul parametru
-    values.push(userId);
-
-    // Actualizează utilizatorul
-    const updateQuery = `
-      UPDATE users 
-      SET ${updateFields.join(", ")}, updated_at = NOW() 
-      WHERE id = $${paramCounter} 
-      RETURNING id, email, name, surname, phone_number, two_factor_enabled, updated_at
-    `;
-
-    const result = await db.query(updateQuery, values);
-
-    res.status(200).json({
-      message: "Utilizatorul a fost actualizat cu succes.",
-      user: result.rows[0],
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Șterge un utilizator și toate fișierele sale
+ * Ștergere utilizator și toate fișierele sale
  */
 const deleteUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
     const db = req.app.locals.db;
 
-    // Verifică dacă utilizatorul există
+    // Verificăm dacă utilizatorul există
     const userExists = await db.query("SELECT id FROM users WHERE id = $1", [
       userId,
     ]);
@@ -198,57 +158,50 @@ const deleteUser = async (req, res, next) => {
       throw ApiError.notFound("Utilizatorul nu a fost găsit.");
     }
 
-    // Obține toate fișierele utilizatorului
+    // Obținem toate fișierele utilizatorului
     const filesResult = await db.query(
       "SELECT id FROM files WHERE user_id = $1",
       [userId]
     );
-
-    // Începe tranzacția
     await db.query("BEGIN");
 
     try {
-      // Pentru fiecare fișier, șterge fragmentele asociate
+      // Pentru fiecare fișier, se șterg fragmentele asociate
       for (const file of filesResult.rows) {
         const fileId = file.id;
 
-        // Obține fragmentele fișierului
+        // Obținere fragmente fișier
         const fragmentsResult = await db.query(
           "SELECT container_id, fragment_name FROM fragments WHERE file_id = $1",
           [fileId]
         );
 
-        // Șterge fragmentele din containere
+        // Ștergere fragmente din containere
         for (const fragment of fragmentsResult.rows) {
           try {
-            await containerService.deleteFragment(
+            await containerService.deleteFragmentWithStorageUpdate(
               fragment.container_id,
               fragment.fragment_name
             );
           } catch (error) {
             console.error(`Eroare la ștergerea fragmentului:`, error);
-            // Continuă cu celelalte ștergeri chiar dacă una eșuează
           }
         }
 
-        // Șterge fragmentele din baza de date
+        // Ștergere fragmente din baza de date
         await db.query("DELETE FROM fragments WHERE file_id = $1", [fileId]);
       }
 
-      // Șterge toate fișierele utilizatorului
+      // Ștergem toate fișierele utilizatorului + utilizatorul
       await db.query("DELETE FROM files WHERE user_id = $1", [userId]);
-
-      // Șterge utilizatorul
       await db.query("DELETE FROM users WHERE id = $1", [userId]);
 
-      // Comite tranzacția
       await db.query("COMMIT");
 
       res.status(200).json({
         message: "Utilizatorul și toate datele sale au fost șterse cu succes.",
       });
     } catch (error) {
-      // Revine la starea anterioară în caz de eroare
       await db.query("ROLLBACK");
       throw error;
     }
@@ -320,116 +273,11 @@ const getAllFiles = async (req, res, next) => {
 };
 
 /**
- * Șterge un fișier și fragmentele sale (similar cu metoda din files.controller, dar fără verificarea proprietarului)
- */
-const deleteFile = async (req, res, next) => {
-  try {
-    const fileId = req.params.id;
-    const db = req.app.locals.db;
-
-    // Verifică dacă fișierul există
-    const fileResult = await db.query("SELECT id FROM files WHERE id = $1", [
-      fileId,
-    ]);
-
-    if (fileResult.rows.length === 0) {
-      throw ApiError.notFound("Fișierul nu a fost găsit.");
-    }
-
-    // Obține toate fragmentele fișierului
-    const fragmentsResult = await db.query(
-      "SELECT container_id, fragment_name FROM fragments WHERE file_id = $1",
-      [fileId]
-    );
-
-    // Șterge fragmentele de pe containere
-    await Promise.all(
-      fragmentsResult.rows.map(async (fragment) => {
-        try {
-          await containerService.deleteFragment(
-            fragment.container_id,
-            fragment.fragment_name
-          );
-        } catch (error) {
-          console.error(`Eroare la ștergerea fragmentului:`, error);
-          // Continuă cu celelalte ștergeri chiar dacă una eșuează
-        }
-      })
-    );
-
-    // Începe tranzacția pentru ștergerea din baza de date
-    await db.query("BEGIN");
-
-    try {
-      // Șterge fragmentele din baza de date
-      await db.query("DELETE FROM fragments WHERE file_id = $1", [fileId]);
-
-      // Șterge înregistrarea fișierului
-      await db.query("DELETE FROM files WHERE id = $1", [fileId]);
-
-      // Comite tranzacția
-      await db.query("COMMIT");
-    } catch (error) {
-      // Revine la starea anterioară în caz de eroare
-      await db.query("ROLLBACK");
-      throw error;
-    }
-
-    res.status(200).json({
-      message: "Fișierul și toate fragmentele sale au fost șterse cu succes.",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Obține starea tuturor containerelor de stocare
- */
-const getContainersStatus = async (req, res, next) => {
-  try {
-    // Obține informații despre toate containerele
-    const containers = await containerService.getAllContainersStatus();
-
-    // Organizează datele pentru răspuns
-    const formattedContainers = containers.map((container) => ({
-      id: container.id,
-      name: container.name,
-      status: container.status,
-      fragmentCount: container.fragmentCount,
-      totalSize: container.totalSize,
-      totalSizeFormatted: formatBytes(container.totalSize),
-      health: container.health || "Unknown",
-      lastChecked: container.lastChecked,
-    }));
-
-    res.status(200).json({
-      containers: formattedContainers,
-      totalContainers: formattedContainers.length,
-      activeContainers: formattedContainers.filter((c) => c.status === "active")
-        .length,
-      totalFragments: formattedContainers.reduce(
-        (sum, c) => sum + c.fragmentCount,
-        0
-      ),
-      totalSize: formattedContainers.reduce((sum, c) => sum + c.totalSize, 0),
-      totalSizeFormatted: formatBytes(
-        formattedContainers.reduce((sum, c) => sum + c.totalSize, 0)
-      ),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
  * Repornește un container specific
  */
 const restartContainer = async (req, res, next) => {
   try {
     const containerId = req.params.id;
-
-    // Verifică dacă containerul există
     const containerExists = await containerService.containerExists(containerId);
 
     if (!containerExists) {
@@ -466,7 +314,6 @@ const getSystemStats = async (req, res, next) => {
         containerService.getAllContainersStatus(),
       ]);
 
-    // Calculează statistici lunare (activitate pe ultimele 6 luni)
     const monthlyActivityResult = await db.query(`
       SELECT 
         TO_CHAR(created_at, 'YYYY-MM') as month,
@@ -500,8 +347,26 @@ const getSystemStats = async (req, res, next) => {
 
     // Formatează răspunsul
     const totalSize = parseInt(filesResult.rows[0].total_size) || 0;
+    const totalContainerStorage = containerResult.length * 1073741824;
+
+    const containerStorageResult = await db.query(
+      "SELECT SUM(storage_used) as used_storage FROM containers"
+    );
+    const usedContainerStorage =
+      parseInt(containerStorageResult.rows[0].used_storage) || 0;
+
+    // Calculează procentul de utilizare total
+    const totalStorageUsagePercent =
+      totalContainerStorage > 0
+        ? (usedContainerStorage / totalContainerStorage) * 100
+        : 0;
 
     res.status(200).json({
+      totalUsers: parseInt(usersResult.rows[0].total),
+      totalFiles: parseInt(filesResult.rows[0].total),
+      totalSizeFormatted: formatBytes(totalSize),
+      activeContainers: containerResult.filter((c) => c.status === "active"),
+      healthStatus: "Healthy",
       users: {
         total: parseInt(usersResult.rows[0].total),
       },
@@ -517,6 +382,17 @@ const getSystemStats = async (req, res, next) => {
         total: containerResult.length,
         active: containerResult.filter((c) => c.status === "active").length,
         inactive: containerResult.filter((c) => c.status !== "active").length,
+      },
+      storage: {
+        totalCapacity: totalContainerStorage,
+        totalCapacityFormatted: formatBytes(totalContainerStorage),
+        usedStorage: usedContainerStorage,
+        usedStorageFormatted: formatBytes(usedContainerStorage),
+        availableStorage: totalContainerStorage - usedContainerStorage,
+        availableStorageFormatted: formatBytes(
+          totalContainerStorage - usedContainerStorage
+        ),
+        usagePercent: totalStorageUsagePercent,
       },
       monthlyActivity: monthlyActivityResult.rows.map((month) => ({
         month: month.month,
@@ -542,7 +418,6 @@ const getSystemStats = async (req, res, next) => {
 const rebalanceFragments = async (req, res, next) => {
   try {
     const db = req.app.locals.db;
-
     // Obține starea curentă a containerelor
     const containers = await containerService.getAllContainersStatus();
 
@@ -585,8 +460,6 @@ const rebalanceFragments = async (req, res, next) => {
 
     // Inițializează contoarele pentru statistici
     let movedFragments = 0;
-
-    // Începe procesul de reechilibrare
     const operationsLog = [];
 
     for (const sourceContainer of overloadedContainers) {
@@ -610,7 +483,7 @@ const rebalanceFragments = async (req, res, next) => {
 
       // Mută fragmentele către containerele subîncărcate
       for (const fragment of fragments) {
-        // Sortează containerele subîncărcate după numărul de fragmente (crescător)
+        // Sortează containerele subîncărcate după numărul de fragmente crescător
         underloadedContainers.sort((a, b) => a.fragmentCount - b.fragmentCount);
 
         if (underloadedContainers.length === 0) break;
@@ -618,37 +491,35 @@ const rebalanceFragments = async (req, res, next) => {
         const targetContainer = underloadedContainers[0];
 
         try {
-          // Obține conținutul fragmentului de la containerul sursă
           const fragmentContent = await containerService.retrieveFragment(
             sourceContainer.id,
             fragment.fragment_name
           );
 
           // Stochează fragmentul în containerul țintă
-          await containerService.storeFragment(
+          await containerService.storeFragmentWithStorageUpdate(
+            this.db,
             targetContainer.id,
             fragment.fragment_name,
             fragmentContent
           );
 
-          // Actualizează înregistrarea în baza de date
+          // Actualizează baza de date
           await db.query(
             "UPDATE fragments SET container_id = $1 WHERE id = $2",
             [targetContainer.id, fragment.id]
           );
 
           // Șterge fragmentul din containerul sursă
-          await containerService.deleteFragment(
+          await containerService.deleteFragmentWithStorageUpdate(
             sourceContainer.id,
             fragment.fragment_name
           );
 
-          // Actualizează contoarele
           sourceContainer.fragmentCount--;
           targetContainer.fragmentCount++;
           movedFragments++;
 
-          // Adaugă operația la log
           operationsLog.push({
             fragmentId: fragment.id,
             sourceContainer: sourceContainer.id,
@@ -659,7 +530,6 @@ const rebalanceFragments = async (req, res, next) => {
             `Eroare la mutarea fragmentului ${fragment.id}:`,
             error
           );
-          // Continuă cu celelalte fragmente
         }
       }
     }
@@ -689,16 +559,39 @@ function formatBytes(bytes, decimals = 2) {
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 }
+/**
+ * Obține raportul complet de storage pentru containere
+ */
+const getStorageReport = async (req, res, next) => {
+  try {
+    const db = req.app.locals.db;
+    const report = await containerService.getStorageReport(db);
+
+    res.status(200).json({
+      success: true,
+      data: report,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Rebalansează containerele
+ */
+const rebalanceContainers = async (req, res, next) => {
+  return await rebalanceFragments(req, res, next);
+};
 
 module.exports = {
   getAllUsers,
   getUserById,
-  updateUser,
   deleteUser,
   getAllFiles,
-  deleteFile,
-  getContainersStatus,
   restartContainer,
   getSystemStats,
   rebalanceFragments,
+  getStorageReport,
+  rebalanceContainers,
 };

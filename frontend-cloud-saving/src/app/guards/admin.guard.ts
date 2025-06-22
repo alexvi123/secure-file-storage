@@ -5,16 +5,16 @@ import { AuthService } from '../services/auth.service';
 @Injectable({
     providedIn: 'root'
 })
-export class AuthGuard {
+export class AdminGuard {
     constructor(private authService: AuthService, private router: Router) { }
 
     canActivate(): boolean {
-        if (this.authService.isAuthenticated()) {
+        const user = this.authService.currentUserValue;
+        if (user && user.role == 'admin') {
             return true;
         }
-        // Utilizatorul nu este autentificat, redirecționează către login
-        this.router.navigate(['/auth/login']);
+
+        this.router.navigate(['/dashboard']);
         return false;
     }
 }
-

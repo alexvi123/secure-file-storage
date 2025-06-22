@@ -7,12 +7,10 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { logger, requestLogger, logSystem } = require("./utils/logger.util");
 
-// Importă rutele
 const authRoutes = require("./routes/auth.routes");
 const filesRoutes = require("./routes/files.routes");
 const adminRoutes = require("./routes/admin.routes");
 
-// Importă middleware-urile
 const {
   authMiddleware,
   adminMiddleware,
@@ -21,12 +19,44 @@ const errorHandler = require("./middlewares/error.middleware");
 
 // Inițializează aplicația Express
 const app = express();
-
+app.use((req, res, next) => {
+  console.log(`=== ${new Date().toISOString()} === ${req.method} ${req.url}`);
+  next();
+});
 // Conectare la baza de date PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false, // Explicitly disable SSL
+  ssl: false,
 });
+
+const Container = require("./models/container.model");
+const initializeContainers = async () => {
+  try {
+    logger.info("Inițializează containerele în baza de date...");
+
+    const containerModel = new Container(pool);
+    const NUM_CONTAINERS = parseInt(process.env.NUM_STORAGE_CONTAINERS || "20");
+    const DEFAULT_STORAGE = 1073741824; // 1GB per container
+
+    for (let i = 1; i <= NUM_CONTAINERS; i++) {
+      await containerModel.createOrUpdate({
+        id: i,
+        status: "active",
+        last_check: new Date(),
+        storage_total: DEFAULT_STORAGE,
+      });
+    }
+
+    // Sincronizează storage-ul folosit
+    await containerModel.syncAllStorageUsed();
+
+    logger.info(
+      `${NUM_CONTAINERS} containere inițializate cu stocare de ${DEFAULT_STORAGE} bytes fiecare`
+    );
+  } catch (error) {
+    logger.error("Eroare la inițializarea containerelor:", error);
+  }
+};
 
 // Verifică conexiunea la baza de date
 pool.query("SELECT NOW()", (err, res) => {
@@ -34,6 +64,7 @@ pool.query("SELECT NOW()", (err, res) => {
     logger.error("Eroare la conectarea la baza de date:", err);
   } else {
     logger.info(`Baza de date conectată cu succes la: ${res.rows[0].now}`);
+    initializeContainers();
   }
 });
 
@@ -56,11 +87,15 @@ const apiLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 
 // Middleware pentru parsarea cererii
-app.use(cors()); // Allow all origins
-app.use(express.json({ limit: "50mb" })); // Limită mărită pentru încărcarea fișierelor
+app.use(
+  cors({
+    origin: ["http://localhost:4210", `http:192.168.1.185:4210`],
+    credentials: true,
+  })
+); // Allow all origins
+app.use(express.json({ limit: "50mb" })); // Limită pentru încărcarea fișierelor
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Servirea fișierelor statice (dacă este necesar)
 app.use("/static", express.static(path.join(__dirname, "public")));
 
 // Rute API
@@ -96,7 +131,7 @@ app.use((req, res) => {
 
 // Pornește serverul
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   logger.info(`Serverul rulează pe portul ${PORT}`);
   logger.info(`Mediu: ${process.env.NODE_ENV || "development"}`);
 
@@ -107,7 +142,6 @@ const server = app.listen(PORT, () => {
   });
 });
 
-// Gestionare închidere grațioasă
 process.on("SIGTERM", () => {
   logger.info("SIGTERM primit. Închidere grațioasă...");
 
@@ -132,11 +166,7 @@ process.on("SIGTERM", () => {
 process.on("uncaughtException", (error) => {
   logger.error("Excepție negestionată:", error);
 
-  // În producție, ar trebui să notificați un serviciu de monitorizare
-  // și să reporniți aplicația în mod grațios
-
   if (process.env.NODE_ENV === "production") {
-    // Încearcă să închizi grațios și să repornești
     process.exit(1);
   }
 });
@@ -145,4 +175,4 @@ process.on("unhandledRejection", (reason, promise) => {
   logger.error("Promisiune respinsă negestionată:", reason);
 });
 
-module.exports = app; // Pentru testare
+module.exports = app;

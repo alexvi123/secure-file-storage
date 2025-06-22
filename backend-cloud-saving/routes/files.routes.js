@@ -3,14 +3,15 @@ const router = express.Router();
 const filesController = require("../controllers/files.controller");
 const StorageService = require("../services/storage.service");
 const {
-  upload,
-  handleMulterError,
-  cleanupOnFinish,
+  uploadMiddleware,
+  handleMulterErrorMiddleware,
+  cleanupOnFinishMiddleware,
 } = require("../middlewares/upload.middleware");
 const {
   authMiddleware,
   ownershipMiddleware,
 } = require("../middlewares/auth.middleware");
+console.log("=== FILES ROUTES LOADED ===");
 
 /**
  * @route POST /api/files/upload
@@ -19,25 +20,21 @@ const {
  */
 router.post(
   "/upload",
-  upload.single("file"),
-  handleMulterError,
-  cleanupOnFinish,
-  filesController.uploadFile
+  uploadMiddleware.single("file"),
+  handleMulterErrorMiddleware,
+  cleanupOnFinishMiddleware,
+  (req, res, next) => {
+    console.log("=== UPLOAD ROUTE REACHED ===");
+    console.log("File received:", req.file ? req.file.originalname : "NO FILE");
+    filesController.uploadFile(req, res, next);
+  }
 );
-
 /**
  * @route GET /api/files
  * @description Obține lista de fișiere ale utilizatorului autentificat
  * @access Private
  */
 router.get("/", filesController.getUserFiles);
-
-/**
- * @route GET /api/files/search
- * @description Caută fișiere după nume
- * @access Private
- */
-router.get("/search", filesController.searchFiles);
 
 /**
  * @route GET /api/files/stats
@@ -89,27 +86,5 @@ router.delete(
   ownershipMiddleware("id", "file"),
   filesController.deleteFile
 );
-
-/**
- * @route GET /api/files/:id/integrity
- * @description Verifică integritatea unui fișier
- * @access Private
- */
-// router.get(
-//   "/:id/integrity",
-//   ownershipMiddleware("id", "file"),
-//   StorageService.verifyFileIntegrity
-// );
-
-/**
- * @route POST /api/files/:id/repair
- * @description Încearcă să repare un fișier
- * @access Private
- */
-// router.post(
-//   "/:id/repair",
-//   ownershipMiddleware("id", "file"),
-//   filesController.repairFile
-// );
 
 module.exports = router;

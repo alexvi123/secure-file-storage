@@ -1,10 +1,8 @@
-// src/app/services/file.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpParams, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-// Folosim URL-ul API direct (sau puteți importa din config.ts)
 const API_URL = '/api';
 
 export interface FileMetadata {
@@ -75,37 +73,11 @@ export class FileService {
             .pipe(catchError(this.handleError));
     }
 
-    /**
-     * Caută fișiere după nume
-     */
-    searchFiles(query: string, page: number = 1, limit: number = 10): Observable<PaginatedResponse<FileMetadata>> {
-        const params = new HttpParams()
-            .set('query', query)
-            .set('page', page.toString())
-            .set('limit', limit.toString());
-
-        return this.http.get<PaginatedResponse<FileMetadata>>(`${this.apiUrl}/search`, { params })
-            .pipe(catchError(this.handleError));
-    }
-
-    /**
-     * Obține detalii despre un fișier
-     */
-    getFileDetails(fileId: number): Observable<FileMetadata> {
-        return this.http.get<FileMetadata>(`${this.apiUrl}/${fileId}`)
-            .pipe(catchError(this.handleError));
-    }
 
     /**
      * Încarcă un fișier
      */
     uploadFile(file: File): Observable<HttpEvent<FileUploadResponse>> {
-        console.error('DEBUG: FileService uploadFile called');
-        console.error('DEBUG: File to upload:', {
-            name: file.name,
-            type: file.type,
-            size: file.size
-        });
         const formData = new FormData();
         formData.append('file', file);
 
@@ -116,7 +88,6 @@ export class FileService {
 
         return this.http.request<FileUploadResponse>(request)
             .pipe(catchError(error => {
-                console.error('Error during file upload:', error);
                 if (error instanceof HttpErrorResponse) {
                     const serverMessage = error.error?.message || error.message || 'A apărut o eroare la încărcarea fișierului';
                     return throwError(() => new Error(serverMessage));
@@ -144,14 +115,6 @@ export class FileService {
     }
 
     /**
-     * Redenumește un fișier
-     */
-    renameFile(fileId: number, newName: string): Observable<FileMetadata> {
-        return this.http.put<FileMetadata>(`${this.apiUrl}/${fileId}`, { newName })
-            .pipe(catchError(this.handleError));
-    }
-
-    /**
      * Obține statistici despre fișierele utilizatorului
      */
     getUserStats(): Observable<FileStats> {
@@ -167,20 +130,7 @@ export class FileService {
             .pipe(catchError(this.handleError));
     }
 
-    /**
-     * Repară un fișier
-     */
-    repairFile(fileId: number): Observable<any> {
-        return this.http.post(`${this.apiUrl}/${fileId}/repair`, {})
-            .pipe(catchError(this.handleError));
-    }
 
-    /**
-     * Obține URL-ul pentru previzualizare fișier (pentru imagini, PDF-uri, etc.)
-     */
-    getPreviewUrl(fileId: number): string {
-        return `${this.apiUrl}/${fileId}/download`;
-    }
 
     /**
      * Gestionează erorile HTTP
@@ -196,7 +146,6 @@ export class FileService {
         } else if (error instanceof Error) {
             errorMessage = error.message;
         }
-        console.error('FileService error:', errorMessage, error);
         return throwError(() => new Error(errorMessage));
     }
 }

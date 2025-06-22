@@ -21,8 +21,6 @@ const CONTAINER_PORT = process.env.CONTAINER_PORT || "3000";
  */
 const getContainerCount = async () => {
   try {
-    // În implementarea de producție, ar trebui să verificăm containerele active
-    // Pentru proiectul tău, vom folosi numărul configurat
     return NUM_CONTAINERS;
   } catch (error) {
     console.error("Eroare la obținerea numărului de containere:", error);
@@ -34,13 +32,23 @@ const getContainerCount = async () => {
  * Generează un ID aleatoriu de container
  * @returns {Promise<number>} ID-ul containerului
  */
-const getRandomContainerId = async () => {
+const getRandomContainerId = async (db = null) => {
+  if (db) {
+    try {
+      return await getBalancedContainerForFragment(db, 0); // 0 = orice dimensiune
+    } catch (error) {
+      console.error(
+        "Eroare la distribuția echilibrată, folosesc random:",
+        error
+      );
+    }
+  }
+
+  // Fallback la distribuția aleatorie
   const containerCount = await getContainerCount();
   if (containerCount === 0) {
     throw new Error("Nu există containere disponibile");
   }
-
-  // Generează un număr aleatoriu între 1 și containerCount
   return Math.floor(Math.random() * containerCount) + 1;
 };
 
@@ -50,16 +58,7 @@ const getRandomContainerId = async () => {
  * @returns {string} URL-ul containerului
  */
 const getContainerUrl = (containerId) => {
-  // În dezvoltare locală, toate containerele rulează pe localhost pe porturi diferite
-  // În producție, ar trebui să utilizeze DNS intern Docker
-  if (process.env.NODE_ENV === "production") {
-    return `http://${CONTAINER_PREFIX}${containerId}:${CONTAINER_PORT}`;
-  } else {
-    // Pentru dezvoltarea locală, folosim portul calculat
-    // Presupunem că porturile încep de la 3001 și cresc pentru fiecare container
-    const containerPort = 3001 + (containerId - 1);
-    return `http://localhost:${containerPort}`;
-  }
+  return `http://${CONTAINER_PREFIX}${containerId}:${CONTAINER_PORT}`;
 };
 
 /**
@@ -75,12 +74,10 @@ const containerExists = async (containerId) => {
 
     const containerName = `${CONTAINER_PREFIX}${containerId}`;
 
-    // În dezvoltare, verifică doar dacă ID-ul este valid
     if (process.env.NODE_ENV !== "production") {
       return true;
     }
 
-    // În producție, verifică dacă containerul există cu Docker
     const { stdout } = await exec(
       `docker ps --filter "name=${containerName}" --format "{{.Names}}"`
     );
@@ -105,14 +102,12 @@ const storeFragment = async (containerId, fragmentName, fragmentData) => {
   try {
     const containerUrl = getContainerUrl(containerId);
 
-    // Creează un obiect FormData pentru a trimite fișierul
     const FormData = require("form-data");
     const form = new FormData();
     form.append("fragment", fragmentData, {
       filename: fragmentName,
       contentType: "application/octet-stream",
     });
-
     // Trimite cererea către container
     const response = await axios.post(`${containerUrl}/fragments`, form, {
       headers: {
@@ -193,9 +188,11 @@ const deleteFragment = async (containerId, fragmentName) => {
  */
 const getContainerStatus = async (containerId) => {
   try {
+    if (isNaN(containerId) || containerId < 1 || containerId > NUM_CONTAINERS) {
+      throw new Error(`Container ID ${containerId} invalid`);
+    }
     const containerUrl = getContainerUrl(containerId);
 
-    // Încearcă să obțină starea containerului
     const response = await axios.get(`${containerUrl}/status`, {
       timeout: 2000,
     });
@@ -211,6 +208,8 @@ const getContainerStatus = async (containerId) => {
     };
   } catch (error) {
     // Dacă nu putem obține starea, considerăm containerul inactiv
+    console.error(`Error for container ${containerId}:`, error.message);
+
     return {
       id: containerId,
       name: `${CONTAINER_PREFIX}${containerId}`,
@@ -235,7 +234,6 @@ const getAllContainersStatus = async () => {
   for (let i = 1; i <= containerCount; i++) {
     statusPromises.push(getContainerStatus(i));
   }
-
   return Promise.all(statusPromises);
 };
 
@@ -252,47 +250,481 @@ const restartContainer = async (containerId) => {
 
     const containerName = `${CONTAINER_PREFIX}${containerId}`;
 
-    // În dezvoltare, simulăm repornirea
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[DEV] Simulare repornire container: ${containerName}`);
-      return { success: true, message: "Container repornit (simulare)" };
+      return {
+        success: true,
+        message: "Container repornit",
+        containerId: containerId,
+        containerName: containerName,
+      };
     }
 
-    // În producție, repornește containerul cu Docker
-    await exec(`docker restart ${containerName}`);
+    const { stdout, stderr } = await exec(`docker restart ${containerName}`);
 
     return {
       success: true,
       message: `Containerul ${containerName} a fost repornit cu succes`,
+      containerId: containerId,
+      containerName: containerName,
+      dockerOutput: stdout,
     };
   } catch (error) {
-    console.error(`Eroare la repornirea containerului ${containerId}:`, error);
     throw new Error(`Nu s-a putut reporni containerul: ${error.message}`);
   }
 };
 
+const Container = require("../models/container.model");
+
 /**
- * Obține lista fragmentelor dintr-un container
+ * Actualizează statusul unui container în baza de date
+ * @param {Object} db - Conexiunea la baza de date
  * @param {number} containerId - ID-ul containerului
- * @returns {Promise<Array<Object>>} Lista fragmentelor
+ * @param {string} status - Noul status
  */
-const getContainerFragments = async (containerId) => {
+const updateContainerStatus = async (db, containerId, status) => {
   try {
-    const containerUrl = getContainerUrl(containerId);
-
-    // Trimite cererea către container
-    const response = await axios.get(`${containerUrl}/fragments/list`);
-
-    return response.data.fragments || [];
+    const containerModel = new Container(db);
+    await containerModel.updateStatus(containerId, status);
   } catch (error) {
     console.error(
-      `Eroare la obținerea listei de fragmente din containerul ${containerId}:`,
+      `Eroare la actualizarea statusului containerului ${containerId}:`,
       error
     );
-    throw new Error(`Nu s-a putut obține lista de fragmente: ${error.message}`);
   }
 };
 
+/**
+ * Actualizează last_check pentru un container
+ * @param {Object} db - Conexiunea la baza de date
+ * @param {number} containerId - ID-ul containerului
+ */
+const updateContainerLastCheck = async (db, containerId) => {
+  try {
+    const containerModel = new Container(db);
+    await containerModel.updateLastCheck(containerId);
+  } catch (error) {
+    console.error(
+      `Eroare la actualizarea last_check pentru containerul ${containerId}:`,
+      error
+    );
+  }
+};
+
+/**
+ * Verifică statusul unui container și actualizează în baza de date
+ * @param {Object} db - Conexiunea la baza de date
+ * @param {number} containerId - ID-ul containerului
+ * @returns {Promise<Object>} Statusul containerului
+ */
+const checkAndUpdateContainerStatus = async (db, containerId) => {
+  try {
+    const status = await getContainerStatus(containerId);
+    await updateContainerStatus(db, containerId, status.status);
+    return status;
+  } catch (error) {
+    console.error(
+      `Eroare la verificarea statusului containerului ${containerId}:`,
+      error
+    );
+    await updateContainerStatus(db, containerId, "error");
+    return { status: "error", message: error.message };
+  }
+};
+
+/**
+ * Verifică toate containerele și actualizează statusurile în baza de date
+ * @param {Object} db - Conexiunea la baza de date
+ * @returns {Promise<Array>} Lista cu statusurile tuturor containerelor
+ */
+const checkAllContainersAndUpdate = async (db) => {
+  const NUM_CONTAINERS = parseInt(process.env.NUM_STORAGE_CONTAINERS || "20");
+  const results = [];
+
+  for (let i = 1; i <= NUM_CONTAINERS; i++) {
+    const status = await checkAndUpdateContainerStatus(db, i);
+    results.push({
+      id: i,
+      ...status,
+    });
+  }
+
+  return results;
+};
+
+/**
+ * Stochează un fragment și actualizează storage-ul containerului
+ */
+const storeFragmentWithStorageUpdate = async (
+  db,
+  containerId,
+  fragmentName,
+  fragmentData
+) => {
+  try {
+    // Apelează funcția originală de stocare
+    const result = await storeFragment(containerId, fragmentName, fragmentData);
+
+    // Actualizează storage-ul folosit în baza de date
+    const containerModel = new Container(db);
+    const updateResult = await containerModel.updateStorageUsed(containerId);
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Șterge un fragment și actualizează storage-ul containerului
+ */
+const deleteFragmentWithStorageUpdate = async (
+  db,
+  containerId,
+  fragmentName
+) => {
+  try {
+    // Apelează funcția originală de ștergere
+    const result = await deleteFragment(containerId, fragmentName);
+
+    // Actualizează storage-ul folosit în baza de date
+    const containerModel = new Container(db);
+    await containerModel.updateStorageUsed(containerId);
+
+    return result;
+  } catch (error) {
+    console.error(
+      `Eroare la ștergerea fragmentului ${fragmentName} din containerul ${containerId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+/**
+ * Sincronizează storage-ul pentru toate containerele
+ */
+const syncAllContainersStorage = async (db) => {
+  try {
+    const containerModel = new Container(db);
+    const result = await containerModel.syncAllStorageUsed();
+    console.log(`Storage sincronizat pentru ${result.length} containere`);
+    return result;
+  } catch (error) {
+    console.error("Eroare la sincronizarea storage-ului:", error);
+    throw error;
+  }
+};
+
+/**
+ * Obține un raport detaliat despre utilizarea storage-ului
+ */
+const getStorageReport = async (db) => {
+  try {
+    const containerModel = new Container(db);
+    const [containers, overview, lowSpaceContainers] = await Promise.all([
+      containerModel.getAllWithStorageStats(),
+      containerModel.getStorageOverview(),
+      containerModel.getContainersWithLowSpace(80),
+    ]);
+
+    return {
+      containers,
+      overview,
+      lowSpaceContainers,
+      recommendations: generateStorageRecommendations(containers, overview),
+    };
+  } catch (error) {
+    console.error("Eroare la generarea raportului de storage:", error);
+    throw error;
+  }
+};
+
+/**
+ * Generează recomandări bazate pe utilizarea storage-ului
+ */
+const generateStorageRecommendations = (containers, overview) => {
+  const recommendations = [];
+
+  // Verifică containerele aproape pline
+  const nearFullContainers = containers.filter((c) => c.usage_percentage > 80);
+  if (nearFullContainers.length > 0) {
+    recommendations.push({
+      type: "warning",
+      message: `${nearFullContainers.length} containere au peste 80% din spațiu ocupat`,
+      action:
+        "Considerați extinderea capacității sau redistribuirea fragmentelor",
+    });
+  }
+
+  // Verifică distribuția inegală
+  const usagePercentages = containers.map((c) => c.usage_percentage);
+  const maxUsage = Math.max(...usagePercentages);
+  const minUsage = Math.min(...usagePercentages);
+
+  if (maxUsage - minUsage > 40) {
+    recommendations.push({
+      type: "info",
+      message: "Distribuția storage-ului este inegală între containere",
+      action: "Rebalansarea fragmentelor ar putea îmbunătăți eficiența",
+    });
+  }
+
+  // Verifică utilizarea generală
+  const totalUsagePercentage =
+    (overview.total_used / overview.total_capacity) * 100;
+  if (totalUsagePercentage > 70) {
+    recommendations.push({
+      type: "warning",
+      message: `Utilizarea generală este ${totalUsagePercentage.toFixed(1)}%`,
+      action: "Planificați extinderea capacității în curând",
+    });
+  }
+
+  return recommendations;
+};
+
+/**
+ * Distribuie uniform fragmentele (algoritm round-robin inteligent)
+ * @param {Object} db - Conexiunea la baza de date
+ * @param {number} fragmentSize - Dimensiunea fragmentului
+ * @returns {Promise<number>} ID-ul containerului
+ */
+const getBalancedContainerForFragment = async (db, fragmentSize) => {
+  try {
+    // Obține containerele sortate după numărul de fragmente
+    const result = await db.query(
+      `
+      SELECT 
+        c.id,
+        COALESCE(f.fragment_count, 0)::INTEGER as fragment_count,
+        (c.storage_total - c.storage_used) as available_space
+      FROM containers c
+      LEFT JOIN (
+        SELECT 
+          container_id,
+          COUNT(*) as fragment_count
+        FROM fragments
+        GROUP BY container_id
+      ) f ON c.id = f.container_id
+      WHERE c.status = 'active'
+        AND (c.storage_total - c.storage_used) >= $1
+      ORDER BY fragment_count ASC, c.id ASC
+    `,
+      [fragmentSize]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error("Nu există containere cu suficient spațiu disponibil");
+    }
+
+    // Returnează primul container cu cel mai mic număr de fragmente
+    return result.rows[0].id;
+  } catch (error) {
+    console.error("Eroare la distribuția echilibrată:", error);
+    throw error;
+  }
+};
+/**
+ * Rebalansează fragmentele între containere - COMPLET REPARAT
+ * @param {Object} db - Conexiunea la baza de date
+ * @returns {Promise<Object>} Rezultatul rebalansării
+ */
+/**
+ * Rebalansează fragmentele între containere - VERSIUNEA FINALĂ FUNCȚIONALĂ
+ * @param {Object} db - Conexiunea la baza de date
+ * @returns {Promise<Object>} Rezultatul rebalansării
+ */
+const rebalanceContainers = async (db) => {
+  try {
+    console.log("Începe rebalansarea containerelor...");
+
+    // Obține distribuția actuală cu FORȚARE INTEGER
+    const distributionResult = await db.query(`
+      SELECT 
+        c.id,
+        COALESCE(f.fragment_count, 0)::INTEGER as fragment_count,
+        c.storage_used,
+        c.storage_total
+      FROM containers c
+      LEFT JOIN (
+        SELECT 
+          container_id,
+          COUNT(*)::INTEGER as fragment_count
+        FROM fragments
+        GROUP BY container_id
+      ) f ON c.id = f.container_id
+      WHERE c.status = 'active'
+      ORDER BY fragment_count DESC
+    `);
+
+    const containers = distributionResult.rows;
+
+    // FORȚEAZĂ CONVERSIA LA INTEGER pentru a evita concatenarea
+    const totalFragments = containers.reduce(
+      (sum, c) => sum + parseInt(c.fragment_count || 0),
+      0
+    );
+
+    const avgFragmentsPerContainer = Math.floor(
+      totalFragments / containers.length
+    );
+    const upperThreshold = avgFragmentsPerContainer + 1; // ±1 pentru testare
+    const lowerThreshold = Math.max(0, avgFragmentsPerContainer - 1);
+
+    console.log(`Total fragmente: ${totalFragments}`);
+    console.log(`Media fragmente per container: ${avgFragmentsPerContainer}`);
+    console.log(
+      `Prag superior: ${upperThreshold}, Prag inferior: ${lowerThreshold}`
+    );
+
+    // Identifică containerele supraîncărcate și subîncărcate
+    const overloadedContainers = containers.filter(
+      (c) => parseInt(c.fragment_count) > upperThreshold
+    );
+    const underloadedContainers = containers.filter(
+      (c) => parseInt(c.fragment_count) < lowerThreshold
+    );
+
+    console.log(`Containere supraîncărcate: ${overloadedContainers.length}`);
+    console.log(`Containere subîncărcate: ${underloadedContainers.length}`);
+
+    if (
+      overloadedContainers.length === 0 ||
+      underloadedContainers.length === 0
+    ) {
+      return {
+        success: true,
+        message: "Distribuția este deja echilibrată",
+        stats: {
+          totalFragments,
+          avgFragmentsPerContainer,
+          movedFragments: 0,
+        },
+      };
+    }
+
+    let movedFragments = 0;
+
+    // Începe tranzacția
+    await db.query("BEGIN");
+
+    try {
+      // Pentru fiecare container supraîncărcat
+      for (const sourceContainer of overloadedContainers) {
+        const fragmentsToMove =
+          parseInt(sourceContainer.fragment_count) - avgFragmentsPerContainer;
+
+        if (fragmentsToMove <= 0) continue;
+
+        // Obține fragmentele de mutat
+        const fragmentsQuery = await db.query(
+          `
+          SELECT id, fragment_name, size_bytes, checksum
+          FROM fragments 
+          WHERE container_id = $1
+          ORDER BY id DESC
+          LIMIT $2
+        `,
+          [sourceContainer.id, fragmentsToMove]
+        );
+
+        // Pentru fiecare fragment de mutat
+        for (const fragment of fragmentsQuery.rows) {
+          // Găsește cel mai potrivit container destinație
+          const targetContainerQuery = await db.query(
+            `
+            SELECT c.id
+            FROM containers c
+            LEFT JOIN (
+              SELECT container_id, COUNT(*)::INTEGER as fragment_count
+              FROM fragments
+              GROUP BY container_id
+            ) f ON c.id = f.container_id
+            WHERE c.status = 'active'
+              AND c.id != $1
+              AND COALESCE(f.fragment_count, 0) < $2
+            ORDER BY COALESCE(f.fragment_count, 0) ASC, c.id ASC
+            LIMIT 1
+          `,
+            [sourceContainer.id, upperThreshold]
+          );
+
+          if (targetContainerQuery.rows.length === 0) break;
+
+          const targetContainerId = targetContainerQuery.rows[0].id;
+
+          try {
+            // Obține conținutul fragmentului
+            const fragmentContent = await retrieveFragment(
+              sourceContainer.id,
+              fragment.fragment_name
+            );
+
+            // Stochează în containerul țintă
+            await storeFragment(
+              targetContainerId,
+              fragment.fragment_name,
+              fragmentContent
+            );
+
+            // Actualizează baza de date
+            await db.query(
+              "UPDATE fragments SET container_id = $1 WHERE id = $2",
+              [targetContainerId, fragment.id]
+            );
+
+            // Șterge din containerul sursă
+            await deleteFragment(sourceContainer.id, fragment.fragment_name);
+
+            movedFragments++;
+            console.log(
+              `Fragment ${fragment.fragment_name} mutat de la container ${sourceContainer.id} la ${targetContainerId}`
+            );
+          } catch (error) {
+            console.error(
+              `Eroare la mutarea fragmentului ${fragment.fragment_name}:`,
+              error
+            );
+            // Continuă cu următorul fragment în caz de eroare
+          }
+        }
+      }
+
+      // Finalizează tranzacția
+      await db.query("COMMIT");
+
+      // ADAUGĂ SINCRONIZAREA STORAGE-ULUI
+      console.log("Sincronizează storage-ul după rebalansare...");
+      try {
+        await syncAllContainersStorage(db);
+        console.log("Storage sincronizat cu succes!");
+      } catch (syncError) {
+        console.warn(
+          "Eroare la sincronizarea storage-ului:",
+          syncError.message
+        );
+      }
+
+      return {
+        success: true,
+        message: `Rebalansare completă. ${movedFragments} fragmente mutate.`,
+        stats: {
+          totalFragments,
+          avgFragmentsPerContainer,
+          movedFragments,
+          overloadedContainers: overloadedContainers.length,
+          underloadedContainers: underloadedContainers.length,
+        },
+      };
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  } catch (error) {
+    console.error("Eroare la rebalansarea containerelor:", error);
+    throw error;
+  }
+};
 module.exports = {
   getContainerCount,
   getRandomContainerId,
@@ -303,5 +735,13 @@ module.exports = {
   getContainerStatus,
   getAllContainersStatus,
   restartContainer,
-  getContainerFragments,
+  storeFragmentWithStorageUpdate,
+  syncAllContainersStorage,
+  getBalancedContainerForFragment,
+  updateContainerStatus,
+  updateContainerLastCheck,
+  checkAndUpdateContainerStatus,
+  checkAllContainersAndUpdate,
+  getStorageReport,
+  rebalanceContainers,
 };

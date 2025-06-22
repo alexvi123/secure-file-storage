@@ -1,0 +1,442 @@
+<div class="admin-container">
+  <header class="admin-header">
+    <div class="header-content">
+      <div class="logo-section">
+        <h1><i class="fa fa-shield"></i> Panou de Administrare</h1>
+        <span class="admin-badge">Administrator</span>
+      </div>
+      
+      <div class="user-menu">
+        <span *ngIf="currentUser" class="welcome-message">
+          <i class="fa fa-user-circle"></i> {{ currentUser.name }} {{ currentUser.surname }}
+        </span>
+        <button class="btn btn-danger" (click)="logout()">
+          <i class="fa fa-sign-out"></i> Deconectare
+        </button>
+      </div>
+    </div>
+  </header>
+  
+  <div class="admin-content">
+    <div class="sidebar">
+      <nav class="sidebar-menu">
+        <a class="menu-item active" data-section="overview" (click)="setActiveSection('overview')">
+          <i class="fa fa-dashboard"></i> Privire generală
+        </a>
+        <a class="menu-item" data-section="users" (click)="setActiveSection('users')">
+          <i class="fa fa-users"></i> Utilizatori
+        </a>
+        <a class="menu-item" data-section="containers" (click)="setActiveSection('containers')">
+          <i class="fa fa-server"></i> Containere
+        </a>
+        <a class="menu-item" data-section="storage" (click)="setActiveSection('storage')">
+          <i class="fa fa-hdd-o"></i> Stocare
+        </a>
+      </nav>
+    </div>
+    
+    <main class="main-content">
+      <!-- Overview Section -->
+      <div *ngIf="activeSection === 'overview'" class="content-section">
+        <div class="section-header">
+          <h2><i class="fa fa-dashboard"></i> Privire generală</h2>
+          <p>Statistici și informații importante despre sistem</p>
+        </div>
+        
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Se încarcă datele...</p>
+        </div>
+        
+        <div *ngIf="!loading && systemStats" class="stats-grid">
+          <div class="stats-card primary">
+            <div class="stats-icon">
+              <i class="fa fa-users"></i>
+            </div>
+            <div class="stats-info">
+              <h3>{{ systemStats.totalUsers || 0 }}</h3>
+              <p>Utilizatori totali</p>
+              <small class="stats-trend positive" *ngIf="systemStats?.newUsersThisMonth">
+                +{{ systemStats.newUsersThisMonth }} în această lună
+              </small>
+            </div>
+          </div>
+          
+          <div class="stats-card success">
+            <div class="stats-icon">
+              <i class="fa fa-files-o"></i>
+            </div>
+            <div class="stats-info">
+              <h3>{{ systemStats.totalFiles || 0 }}</h3>
+              <p>Fișiere totale</p>
+              <small class="stats-trend">{{ systemStats.totalSizeFormatted || '0 B' }} utilizați</small>
+            </div>
+          </div>
+          
+          
+          <div class="stats-card info">
+            <div class="stats-icon">
+              <i class="fa fa-hdd-o"></i>
+            </div>
+            <div class="stats-info">
+              <h3>{{ getStorageUsagePercentage() }}%</h3>
+              <p>Stocare utilizată</p>
+              <small class="stats-trend">{{ systemStats.totalSizeFormatted || '0 B' }} / {{ totalStorageFormatted }}</small>
+            </div>
+          </div>
+        </div>
+        <div class="storage-overview" *ngIf="!loading && systemStats?.storage">
+  
+  <div class="storage-cards">
+    <!-- Card Capacitate Totală -->
+    <div class="storage-card total">
+      <div class="storage-icon">
+        <i class="fa fa-database"></i>
+      </div>
+      <div class="storage-info">
+        <h4>Capacitate Totală</h4>
+        <div class="storage-value">{{ systemStats?.storage?.totalCapacityFormatted }}</div>
+        <div class="storage-details">20 containere × 1 GB</div>
+      </div>
+    </div>
+
+    <!-- Card Spațiu Utilizat -->
+    <div class="storage-card used">
+      <div class="storage-icon">
+        <i class="fa fa-pie-chart"></i>
+      </div>
+      <div class="storage-info">
+        <h4>Spațiu Utilizat</h4>
+        <div class="storage-value">{{ systemStats?.storage?.usedStorageFormatted }}</div>
+        <div class="storage-details">{{ (systemStats?.storage?.usagePercent || 0).toFixed(3) }}% din total</div>
+      </div>
+    </div>
+
+    <!-- Card Spațiu Disponibil -->
+    <div class="storage-card available">
+      <div class="storage-icon">
+        <i class="fa fa-folder-open"></i>
+      </div>
+      <div class="storage-info">
+        <h4>Spațiu Disponibil</h4>
+        <div class="storage-value">{{ systemStats?.storage?.availableStorageFormatted }}</div>
+        <div class="storage-details">{{ (100 - (systemStats?.storage?.usagePercent || 0)).toFixed(3) }}% liber</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Bar pentru Storage -->
+  <div class="storage-progress">
+    <div class="progress-header">
+      <span>Utilizare generală storage</span>
+      <span class="percentage">{{ (systemStats?.storage?.usagePercent || 0).toFixed(3) }}%</span>
+    </div>
+    <div class="progress-bar-storage">
+      <div class="progress-fill-storage" 
+           [style.width.%]="systemStats?.storage?.usagePercent"
+           [class.low-usage]="(systemStats?.storage?.usagePercent || 0) < 50"
+           [class.high-usage]="(systemStats?.storage?.usagePercent || 0) >= 80">
+      </div>
+    </div>
+  </div>
+</div>
+        
+        
+        <!-- Storage Distribution Chart -->
+<div class="storage-distribution" *ngIf="containerStats && containerStats.distribution && containerStats.distribution.length > 0">          <h3><i class="fa fa-pie-chart"></i> Distribuția storage-ului pe containere</h3>
+          <div class="distribution-chart">
+            <div *ngFor="let container of containerStats?.distribution" class="container-bar">
+              <div class="container-info">
+                <span class="container-id">Container {{ container.id }}</span>
+                <span class="container-usage">{{ container.storageUsedFormatted }}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" 
+                     [style.width.%]="getContainerUsagePercentage(container.totalSize)"
+                     [class.high-usage]="getContainerUsagePercentage(container.totalSize) > 80">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Users Section -->
+   <div *ngIf="activeSection === 'users'" class="content-section">
+  <div class="section-header">
+    <h2><i class="fa fa-users"></i> Gestionare utilizatori</h2>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="refreshUsers()">
+        <i class="fa fa-refresh"></i> Actualizează
+      </button>
+    </div>
+  </div>
+
+  <!-- Search și filtere -->
+  <div class="users-controls">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input 
+        type="text" 
+        placeholder="Caută utilizatori..." 
+        [(ngModel)]="userSearchTerm"
+        (input)="filterUsers()"
+        class="search-input">
+    </div>
+    
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Se încarcă utilizatorii...</p>
+  </div>
+
+  <!-- Tabel utilizatori -->
+  <div *ngIf="!loading" class="users-table-container">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Utilizator</th>
+          <th>Email</th>
+          <th>Spațiu utilizat</th>
+          <th>Fișiere</th>
+          <th>Înregistrat</th>
+          <th>Acțiuni</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of filteredUsers; trackBy: trackByUserId" class="user-row">
+          <!-- Coloana Utilizator -->
+          <td class="user-info">
+            <div class="user-avatar">
+              <i class="fa fa-user"></i>
+            </div>
+            <div class="user-details">
+              <div class="user-name">{{ user.name }} {{ user.surname }}</div>
+              <div class="user-meta">
+               <span class="role-badge user">
+  Utilizator
+</span>
+                <span *ngIf="user.two_factor_enabled" class="security-badge">
+                  <i class="fa fa-shield"></i> 2FA
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Coloana Email -->
+          <td class="user-email">
+            {{ user.email }}
+          </td>
+
+          <!-- Coloana Storage -->
+          <td class="user-storage">
+            <div class="storage-info">
+              <div class="storage-amount">{{ user.storageUsedFormatted || '0 B' }}</div>
+              <div class="storage-bar">
+                <div class="storage-progress" 
+                     [style.width.%]="getStoragePercentage(user.storageUsed || 0)"
+                     [class.high-usage]="getStoragePercentage(user.storageUsed) > 80">
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Coloana Fișiere -->
+          <td class="user-files">
+            <span class="file-count">{{ user.fileCount || 0 }}</span>
+          </td>
+
+          <!-- Coloana Data -->
+          <td class="user-date">
+            {{ formatDate(user.created_at) }}
+          </td>
+
+          <!-- Coloana Acțiuni -->
+          <td class="user-actions">
+
+            <button 
+              class="btn-icon btn-danger" 
+              (click)="deleteUser(user)" 
+              title="Șterge"
+              [disabled]="user.id === currentUser?.id">
+              <i class="fa fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Empty state -->
+    <div *ngIf="filteredUsers.length === 0" class="empty-state">
+      <i class="fa fa-users"></i>
+      <h3>Nu s-au găsit utilizatori</h3>
+      <p>Încearcă să modifici criteriile de căutare.</p>
+    </div>
+  </div>
+</div>
+      
+   
+      
+      <!-- Containers Section -->
+      <div *ngIf="activeSection === 'containers'" class="content-section">
+        <div class="section-header">
+          <h2><i class="fa fa-server"></i> Gestionare containere</h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" (click)="refreshContainers()">
+              <i class="fa fa-refresh"></i> Actualizează
+            </button>
+            <button class="btn btn-success" (click)="rebalanceContainers()">
+              <i class="fa fa-balance-scale"></i> Rebalansează
+            </button>
+          </div>
+        </div>
+        
+        <div class="containers-grid">
+          <div *ngFor="let container of containers" class="container-card" 
+               [class.healthy]="container.status === 'active'"
+               [class.warning]="container.storageUsagePercent > 80"
+               [class.error]="container.status !== 'active'">
+            <div class="container-header">
+              <h4><i class="fa fa-server"></i> Container {{ container.id }}</h4>
+              <span class="status-badge" [class]="container.status">{{ container.status }}</span>
+            </div>
+            
+            <div class="container-stats">
+              <div class="stat">
+                <span class="label">Fragmente:</span>
+                <span class="value">{{ container.fragmentCount || 0 }}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Stocare:</span>
+                <span class="value">{{ container.storageUsedFormatted }} / {{ container.storageTotalFormatted }}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Utilizare:</span>
+                <span class="value">{{ (container.storageUsagePercent || 0).toFixed(1) }}%</span>
+              </div>
+            </div>
+            
+            <div class="container-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" 
+                     [style.width.%]="container.storageUsagePercent"
+                     [class.high-usage]="container.storageUsagePercent > 80">
+                </div>
+              </div>
+            </div>
+            
+            <div class="container-actions">
+     
+              <button class="btn btn-sm btn-warning" (click)="restartContainer(container)">
+                <i class="fa fa-refresh"></i> Restart
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Storage Section -->
+      <div *ngIf="activeSection === 'storage'" class="content-section">
+        <div class="section-header">
+          <h2><i class="fa fa-hdd-o"></i> Gestionare stocare</h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" (click)="syncStorage()">
+              <i class="fa fa-sync"></i> Sincronizează
+            </button>
+          </div>
+        </div>
+        
+        <div class="storage-overview">
+          <div class="storage-summary">
+            <h3>Sumar stocare</h3>
+            <div class="summary-stats">
+              <div class="summary-item">
+                <strong>Total disponibil:</strong> {{ totalStorageFormatted }}
+              </div>
+              <div class="summary-item">
+                <strong>Utilizat:</strong> {{ systemStats?.totalSizeFormatted || '0 B' }}
+              </div>
+              <div class="summary-item">
+                <strong>Disponibil:</strong> {{ getAvailableStorageFormatted() }}
+              </div>
+              <div class="summary-item">
+                <strong>Procent utilizare:</strong> {{ getStorageUsagePercentage() }}%
+              </div>
+            </div>
+          </div>
+          
+          <div class="storage-distribution-detailed">
+            <h3>Distribuția detaliată pe containere</h3>
+            <div class="distribution-table">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Container</th>
+                    <th>Status</th>
+                    <th>Fragmente</th>
+                    <th>Utilizat</th>
+                    <th>Total</th>
+                    <th>Procent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let container of containers">
+                    <td>Container {{ container.id }}</td>
+                    <td><span class="status-badge" [class]="container.status">{{ container.status }}</span></td>
+                    <td>{{ container.fragmentCount || 0 }}</td>
+                    <td>{{ container.storageUsedFormatted }}</td>
+                    <td>{{ container.storageTotalFormatted }}</td>
+                    <td>
+                      <span [class.text-warning]="container.storageUsagePercent > 80"
+                            [class.text-danger]="container.storageUsagePercent > 90">
+                        {{ (container.storageUsagePercent || 0).toFixed(1) }}%
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      
+    </main>
+  </div>
+  
+  <!-- Modals -->
+  <div *ngIf="showModal" class="modal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ modalTitle }}</h3>
+        <button class="modal-close" (click)="closeModal()">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <div class="modalContent">
+        <div [innerHTML]="modalContent"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Închide</button>
+        <button *ngIf="modalAction" class="btn btn-primary" (click)="executeModalAction()">
+          {{ modalActionText }}
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast Notifications -->
+  <div class="toast-container">
+    <div *ngFor="let toast of toasts" class="toast" [class]="toast.type">
+      <div class="toast-content">
+        <i class="fa" [class]="getToastIcon(toast.type)"></i>
+        <span>{{ toast.message }}</span>
+      </div>
+      <button class="toast-close" (click)="removeToast(toast)">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+  </div>
+</div>

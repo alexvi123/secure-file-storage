@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const { promisify } = require("util");
 
-// Promisifică funcțiile fs
 const readdirAsync = promisify(fs.readdir);
 const statAsync = promisify(fs.stat);
 const unlinkAsync = promisify(fs.unlink);
@@ -26,7 +25,6 @@ const storage = multer.diskStorage({
     cb(null, STORAGE_PATH);
   },
   filename: function (req, file, cb) {
-    // Folosește numele furnizat
     cb(null, file.originalname);
   },
 });
@@ -130,7 +128,6 @@ app.get("/status", async (req, res) => {
   }
 });
 
-// Endpoint de bază pentru verificarea conectivității
 app.get("/", (req, res) => {
   res.json({
     message: "Containerul de stocare funcționează corect",

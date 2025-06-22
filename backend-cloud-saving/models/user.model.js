@@ -2,10 +2,6 @@
  * Model pentru utilizator
  */
 class User {
-  /**
-   * Inițializează modelul utilizatorului
-   * @param {Object} db - Conexiunea la baza de date
-   */
   constructor(db) {
     this.db = db;
     this.tableName = "users";
@@ -65,7 +61,6 @@ class User {
    * @returns {Promise<Object|null>} Utilizatorul actualizat sau null
    */
   async update(id, userData) {
-    // Construiește setările pentru actualizare
     const setValues = [];
     const queryParams = [];
     let paramCounter = 1;
@@ -78,14 +73,9 @@ class User {
         paramCounter++;
       }
     }
-
-    // Adaugă timestamp-ul de actualizare
     setValues.push(`updated_at = NOW()`);
-
-    // Adaugă ID-ul ca ultimul parametru
     queryParams.push(id);
 
-    // Execută query-ul numai dacă există câmpuri de actualizat
     if (setValues.length === 0) {
       return null;
     }

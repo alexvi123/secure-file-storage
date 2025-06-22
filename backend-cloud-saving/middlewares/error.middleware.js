@@ -97,27 +97,21 @@ const errorHandler = (err, req, res, next) => {
   let statusCode = 500;
   let message = "Eroare internă de server";
   let errors = null;
-
-  // Verifică dacă eroarea este de tip ApiError
   if (err instanceof ApiError) {
     statusCode = err.statusCode;
     message = err.message;
     errors = err.errors;
   } else if (err.name === "ValidationError") {
-    // Erori de validare (de ex. Joi, express-validator)
     statusCode = 422;
     message = "Date de intrare invalide";
     errors = err.details || err.errors;
   } else if (err.name === "UnauthorizedError") {
-    // Erori de autentificare JWT
     statusCode = 401;
     message = "Autentificare invalidă sau expirata";
   } else if (err.name === "SyntaxError" && err.status === 400) {
-    // Erori de parsare JSON
     statusCode = 400;
     message = "JSON invalid";
   }
-
   // Loghează eroarea
   if (statusCode >= 500) {
     logger.error(`Error ${statusCode}: ${message}`, {
@@ -140,24 +134,17 @@ const errorHandler = (err, req, res, next) => {
       method: req.method,
     });
   }
-
-  // Formatează răspunsul
   const errorResponse = {
     status: "error",
     statusCode,
     message,
   };
-
-  // Adaugă erori detaliate dacă există
   if (errors) {
     errorResponse.errors = errors;
   }
-
-  // Adaugă stack trace în mediul de dezvoltare
   if (process.env.NODE_ENV !== "production" && err.stack) {
     errorResponse.stack = err.stack;
   }
-
   res.status(statusCode).json(errorResponse);
 };
 

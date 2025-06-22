@@ -1,4 +1,3 @@
-// src/app/pages/auth/login/login.component.ts
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -42,13 +41,9 @@ export class LoginComponent implements OnInit {
     // Obține URL-ul de returnare din query params sau folosește valoarea implicită
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
 
-    // Dacă utilizatorul este deja autentificat, redirecționează către dashboard
-    // if (this.authService.isAuthenticated()) {
-    //   this.router.navigate([this.returnUrl]);
-    // }
   }
 
-  // Getter pentru acces ușor la câmpurile formularului
+  // Getter pentru acces la câmpurile formularului
   get f() { return this.loginForm.controls; }
 
   onSubmit() {
@@ -76,8 +71,18 @@ export class LoginComponent implements OnInit {
               }
             });
           } else {
-            // Autentificare reușită, redirecționează către pagina de returnare
-            this.router.navigate([this.returnUrl]);
+            // Verifică rolul utilizatorului pentru redirect
+            console.log('Login successful, user data:', response.user);
+
+            // Verifică dacă utilizatorul este admin
+            if (response.user && response.user.role === 'admin') {
+              console.log('Admin user detected, redirecting to /admin');
+              this.router.navigate(['/admin']);
+            } else {
+              console.log('Regular user, redirecting to:', this.returnUrl);
+              // Pentru utilizatorii normali, folosește returnUrl implicit
+              this.router.navigate([this.returnUrl]);
+            }
           }
         },
         error: error => {

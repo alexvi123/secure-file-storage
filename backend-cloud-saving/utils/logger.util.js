@@ -2,13 +2,11 @@ const winston = require("winston");
 const path = require("path");
 const fs = require("fs");
 
-// Asigură că directorul de log-uri există
 const logDir = path.join(__dirname, "../logs");
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
 
-// Definește formatul de log
 const logFormat = winston.format.combine(
   winston.format.timestamp({
     format: "YYYY-MM-DD HH:mm:ss",
@@ -38,7 +36,6 @@ const logger = winston.createLogger({
   format: logFormat,
   defaultMeta: { service: "cloud-storage" },
   transports: [
-    // Scrie în fișier toate log-urile cu nivel 'info' sau mai grav
     new winston.transports.File({
       filename: path.join(logDir, "error.log"),
       level: "error",
@@ -53,7 +50,6 @@ const logger = winston.createLogger({
   ],
 });
 
-// În mediul de dezvoltare, adaugă și output în consolă
 if (process.env.NODE_ENV !== "production") {
   logger.add(
     new winston.transports.Console({

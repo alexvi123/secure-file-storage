@@ -4,15 +4,12 @@ const fs = require("fs");
 const { promisify } = require("util");
 const { ApiError } = require("./error.middleware");
 
-// Promisificăm funcțiile fs
 const unlinkAsync = promisify(fs.unlink);
 const mkdirAsync = promisify(fs.mkdir);
 
-// Directorul pentru fișierele temporare încărcate
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "../uploads");
 const TEMP_DIR = path.join(UPLOAD_DIR, "temp");
 
-// Asigură-te că directoarele necesare există
 (async () => {
   try {
     if (!fs.existsSync(UPLOAD_DIR)) {
@@ -26,13 +23,11 @@ const TEMP_DIR = path.join(UPLOAD_DIR, "temp");
   }
 })();
 
-// Configurează stocarea pentru multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, TEMP_DIR);
   },
   filename: function (req, file, cb) {
-    // Generează un nume unic pentru fișier
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const fileExt = path.extname(file.originalname);
     cb(null, `${uniqueSuffix}${fileExt}`);
@@ -41,7 +36,6 @@ const storage = multer.diskStorage({
 
 // Configurează filtrarea fișierelor
 const fileFilter = (req, file, cb) => {
-  // Lista tipurilor de fișiere permise
   const allowedMimeTypes = [
     // Imagini
     "image/jpeg",
@@ -101,7 +95,7 @@ const limits = {
 };
 
 // Inițializează multer cu opțiunile configurate
-const upload = multer({
+const uploadMiddleware = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: limits,
@@ -110,7 +104,7 @@ const upload = multer({
 /**
  * Middleware pentru a trata erorile multer
  */
-const handleMulterError = (err, req, res, next) => {
+const handleMulterErrorMiddleware = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     let message;
 
@@ -123,9 +117,6 @@ const handleMulterError = (err, req, res, next) => {
       case "LIMIT_FILE_COUNT":
         message =
           "Prea multe fișiere încărcate. Se permite un singur fișier pe cerere.";
-        break;
-      case "LIMIT_UNEXPECTED_FILE":
-        message = "Fișier neașteptat. Verificați numele câmpului de încărcare.";
         break;
       default:
         message = `Eroare la încărcarea fișierului: ${err.message}`;
@@ -142,7 +133,7 @@ const handleMulterError = (err, req, res, next) => {
  * @param {string} filePath - Calea către fișierul care trebuie șters
  * @returns {Promise<void>}
  */
-const cleanupTempFile = async (filePath) => {
+const cleanupTempFileMiddleware = async (filePath) => {
   if (!filePath) return;
 
   try {
@@ -161,21 +152,19 @@ const cleanupTempFile = async (filePath) => {
 /**
  * Middleware pentru a curăța fișierele temporare la finalizarea cererii
  */
-const cleanupOnFinish = (req, res, next) => {
-  // Adaugă un listener pentru evenimentul de finalizare al cererii
+const cleanupOnFinishMiddleware = (req, res, next) => {
   res.on("finish", () => {
-    // Curăță orice fișier temporar atașat la cerere
     if (req.file) {
-      cleanupTempFile(req.file.path);
+      cleanupTempFileMiddleware(req.file.path);
     }
     if (req.files) {
-      // Dacă sunt mai multe fișiere
       if (Array.isArray(req.files)) {
-        req.files.forEach((file) => cleanupTempFile(file.path));
+        req.files.forEach((file) => cleanupTempFileMiddleware(file.path));
       } else {
-        // Dacă este un obiect cu grupuri de fișiere
         Object.keys(req.files).forEach((key) => {
-          req.files[key].forEach((file) => cleanupTempFile(file.path));
+          req.files[key].forEach((file) =>
+            cleanupTempFileMiddleware(file.path)
+          );
         });
       }
     }
@@ -184,36 +173,11 @@ const cleanupOnFinish = (req, res, next) => {
   next();
 };
 
-/**
- * Funcție pentru a valida și procesa fișierul încărcat
- * @param {object} file - Obiectul fișier de la multer
- * @returns {Promise<object>} - Informații despre fișier
- */
-const validateAndProcessFile = async (file) => {
-  if (!file) {
-    throw ApiError.badRequest("Niciun fișier furnizat.");
-  }
-
-  // Extrage informații despre fișier
-  const fileInfo = {
-    originalName: file.originalname,
-    mimeType: file.mimetype,
-    size: file.size,
-    path: file.path,
-  };
-
-  // Aici poți adăuga validări suplimentare sau procesare
-  // De exemplu, verificarea unui virus, metadata, etc.
-
-  return fileInfo;
-};
-
 module.exports = {
-  upload,
-  handleMulterError,
-  cleanupTempFile,
-  cleanupOnFinish,
-  validateAndProcessFile,
+  uploadMiddleware,
+  handleMulterErrorMiddleware,
+  cleanupTempFileMiddleware,
+  cleanupOnFinishMiddleware,
   uploadDir: UPLOAD_DIR,
   tempDir: TEMP_DIR,
 };

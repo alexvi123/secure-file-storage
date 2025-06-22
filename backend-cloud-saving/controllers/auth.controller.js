@@ -5,7 +5,7 @@ const QRCode = require("qrcode");
 const { ApiError } = require("../middlewares/error.middleware");
 
 /**
- *  Registering new user
+ *  Înregistrare utilizator nou
  */
 const register = async (req, res, next) => {
   try {
@@ -59,6 +59,7 @@ const login = async (req, res, next) => {
 
     const user = result.rows[0];
     console.log(user);
+
     // Verifică parola
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) {
@@ -92,7 +93,16 @@ const login = async (req, res, next) => {
     res.status(200).json({
       message: "Autentificare reușită",
       token,
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        surname: user.surname,
+        role: user.role,
+        two_factor_enabled: user.two_factor_enabled,
+        created_at: user.created_at,
+        last_login: user.last_login,
+      },
     });
   } catch (error) {
     next(error);
@@ -105,7 +115,7 @@ const login = async (req, res, next) => {
 const verify2FA = async (req, res, next) => {
   try {
     const { code } = req.body;
-    const userId = req.tempUser.id; // Ia userId-ul din req.tempUser
+    const userId = req.tempUser.id;
 
     if (!code) {
       throw ApiError.badRequest("Codul este obligatoriu.");
@@ -136,7 +146,7 @@ const verify2FA = async (req, res, next) => {
     // Generează token JWT complet
     const token = generateToken(user);
 
-    // Elimină parola și secretul 2FA din obiectul utilizator
+    // Elimină parola și secretul 2FA din utilizator
     delete user.password_hash;
     delete user.two_factor_secret;
 
@@ -178,7 +188,7 @@ const enable2FA = async (req, res, next) => {
 
     // Generează un secret nou pentru 2FA
     const secret = speakeasy.generateSecret({
-      name: `CloudStorage:${user.email}`, // Format pentru aplicațiile autentificator
+      name: `CloudStorage:${user.email}`,
     });
 
     // Generează QR code pentru scanare cu aplicația autentificator
@@ -367,8 +377,6 @@ const updateProfile = async (req, res, next) => {
         message: "Niciun câmp furnizat pentru actualizare.",
       });
     }
-
-    // Adaugă ID-ul utilizatorului ca ultimul parametru
     values.push(userId);
 
     const updateQuery = `
@@ -583,11 +591,9 @@ const refreshToken = async (req, res, next) => {
 };
 
 /**
- * Delogare - în implementare reală s-ar putea adăuga token-ul la o listă neagră
+ * Delogare
  */
 const logout = (req, res) => {
-  // În prezent, doar returnăm un mesaj de succes
-  // Pentru o implementare mai robustă, s-ar putea stoca token-ul într-o "blacklist"
   res.status(200).json({
     message: "Delogare reușită",
   });

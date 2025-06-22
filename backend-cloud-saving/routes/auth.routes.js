@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require("../controllers/auth.controller");
 const {
   authMiddleware,
-  tempTokenMiddleware,
+  twoFactorMiddleware,
 } = require("../middlewares/auth.middleware");
 
 /**
@@ -25,7 +25,7 @@ router.post("/login", authController.login);
  * @description Verifică codul 2FA pentru finalizarea autentificării
  * @access Public (cu token temporar)
  */
-router.post("/verify-2fa", tempTokenMiddleware, authController.verify2FA);
+router.post("/verify-2fa", twoFactorMiddleware, authController.verify2FA);
 
 /**
  * @route POST /api/auth/enable-2fa
@@ -92,7 +92,7 @@ router.post("/reset-password", authController.resetPassword);
 
 /**
  * @route POST /api/auth/logout
- * @description Delogare - poate fi implementat pentru a adăuga token-ul la o blacklist
+ * @description Delogare
  * @access Private
  */
 router.post("/logout", authMiddleware, authController.logout);

@@ -1,21 +1,14 @@
 # Dockerfile pentru frontend
 FROM node:18-alpine AS build
-
 WORKDIR /app
-
 # Copiază fișierele de configurare
 COPY package*.json ./
-
 # Instalează dependențele
 RUN npm install
-
 # Copiază codul sursă
 COPY . .
-
-# Construiește aplicația pentru producție
 RUN npm run build
 
-# Etapa 2: Servește aplicația cu Nginx
 FROM nginx:alpine
 
 # Copiază fișierele de configurare Nginx

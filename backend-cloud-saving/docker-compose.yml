@@ -8,10 +8,10 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=5000
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/cloudstorage
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=JWT_SECRET_KEY
       - NUM_STORAGE_CONTAINERS=20
       - CONTAINER_PREFIX=storage-
       - CONTAINER_PORT=3000
@@ -28,7 +28,7 @@ services:
     image: postgres:14-alpine
     container_name: cloud-postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -45,7 +45,7 @@ services:
     build: ../frontend-cloud-saving
     container_name: cloud-frontend
     ports:
-      - "4200:80"
+      - "4201:80"
     networks:
       - cloud-network
     restart: unless-stopped

@@ -48,7 +48,7 @@ export class RegisterComponent implements OnInit {
     }
   }
 
-  // Getter pentru acces ușor la câmpurile formularului
+  // Getter pentru acces la câmpurile formularului
   get f() { return this.registerForm.controls; }
 
   onSubmit() {

@@ -1,26 +1,17 @@
-# Dockerfile pentru backend
 FROM node:18-alpine
-
 WORKDIR /app
-
 RUN apk add --no-cache python3 make g++
-
-# Copiază fișierele de configurare
+# Copiere fișiere de configurare
 COPY package*.json ./
-
-# Instalează dependențele
+# Instalare dependințe
 RUN npm install --production
 RUN npm rebuild bcrypt --build-from-source
-
-# Copiază codul sursă
+# Copiere cod sursă
 COPY . .
-
-# Expune portul
+# Expunere port
 EXPOSE 5000
-
-# Setează variabilele de mediu
+# Setare variabile de mediu
 ENV NODE_ENV=production
 ENV PORT=5000
-
-# Rulează aplicația
+# Rulare aplicație
 CMD ["node", "server.js"]
